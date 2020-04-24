@@ -3,6 +3,201 @@ from PyQt5 import QtCore, QtWidgets
 import psycopg2
 import pandas as pd
 
+class engrWindow (QtWidgets.QWidget):
+
+    switch_updateInv = QtCore.pyqtSignal(psycopg2.extensions.connection)
+    switch_updateModel = QtCore.pyqtSignal(psycopg2.extensions.connection)
+    switch_employeeView = QtCore.pyqtSignal(psycopg2.extensions.connection)  
+    
+    def __init__(self, connection):
+        QtWidgets.QWidget.__init__(self)
+        self.setWindowTitle('Engineer Page')
+        vBox = QtWidgets.QVBoxLayout()
+        self.button1 = QtWidgets.QPushButton('Access and update model')
+        self.button1.clicked.connect(lambda: self.switch1(connection))
+        vBox.addWidget(self.button1)
+        
+        self.button2 = QtWidgets.QPushButton('Access and update inventory')
+        self.button2.clicked.connect(lambda: self.switch2(connection))
+        vBox.addWidget(self.button2)
+        
+        self.button3 = QtWidgets.QPushButton('Limited view of employee')
+        self.button3.clicked.connect(self.switch3)
+        vBox.addWidget(self.button3)
+        
+        self.setLayout(vBox)
+    
+    def switch1(self, connection):
+        self.switch_updateModel.emit(connection)        
+    def switch2(self, connection):
+        self.switch_updateInv.emit(connection)      
+    def switch3(self, connection):
+        self.switch_employeeView.emit(connection)  
+      
+class windowUpdateInv(QtWidgets.QWidget):
+    
+    def __init__(self, connection):
+        QtWidgets.QWidget.__init__(self)
+        self.changes = ''
+        self.row_chg = -1
+        self.col_chg = -1
+        self.newdata = ''
+        self.model=''
+        self.setWindowTitle('Inventory')
+        layout = QtWidgets.QGridLayout()
+        self.tableView = QtWidgets.QTableView(self)
+
+        self.button = QtWidgets.QPushButton('Display')
+        self.button.clicked.connect(lambda: self.btn_clk(connection))
+
+        self.buttonUpdate = QtWidgets.QPushButton('Update')
+        self.buttonUpdate.clicked.connect(lambda: self.btn_Update(connection))
+        
+        layout.addWidget(self.button)
+        layout.addWidget(self.tableView)
+        layout.addWidget(self.buttonUpdate)
+        self.setLayout(layout)
+        
+    def btn_clk(self, connection):
+        df=pd.DataFrame()
+        try:  
+            
+            query2 = "select * from inventory;"
+            
+            df = pd.read_sql(query2, connection)                                        
+            
+            print("Table retrieved successfully in PostgreSQL ")
+            #print(df)
+        except (Exception, psycopg2.Error) as error :
+            print ("Error while connecting to PostgreSQL", error)
+        finally:
+            #closing database connection.
+                if(connection):      
+                    pass
+
+        #print(df)
+        self.model = DataFrameModel(df)
+        self.tableView.setModel(self.model)
+        #self.tableView.itemSelectionChanged.connect(self.on_selectionChanged)
+        
+        
+    def btn_Update(self, connection):
+        self.changes = self.model._data
+        self.row_chg = self.model.rowchg
+        self.col_chg = self.model.colchg
+        self.newdata = self.model.newdata 
+        #print(self.row_chg, self.col_chg, self.newdata)
+        flag = ''
+        try:
+            cursor = connection.cursor()
+            if(self.col_chg==1):
+                login_sql = """UPDATE inventory
+                            SET cost = %s
+                            WHERE inventory."inventoryID" = %s;"""
+                cursor.execute(login_sql, (self.newdata, self.changes.iloc[self.row_chg, self.col_chg-1])) 
+                flag = "cost"
+            elif(self.col_chg==2):
+                login_sql = """UPDATE inventory
+                            SET "leadTime" = %s
+                            WHERE inventory."inventoryID" = %s;"""
+                cursor.execute(login_sql, (self.newdata, self.changes.iloc[self.row_chg, self.col_chg-2])) 
+                flag = "Lead Time"
+            elif(self.col_chg==3):
+                login_sql = """UPDATE inventory
+                            SET category = %s
+                            WHERE inventory."inventoryID" = %s;"""
+                cursor.execute(login_sql, (self.newdata, self.changes.iloc[self.row_chg, self.col_chg-3])) 
+                flag = "category"
+            elif(self.col_chg==4):
+                login_sql = """UPDATE inventory
+                            SET "itemCount" = %s
+                            WHERE inventory."inventoryID" = %s;"""
+                cursor.execute(login_sql, (self.newdata, self.changes.iloc[self.row_chg, self.col_chg-4])) 
+                flag = "item Count"
+            #role = cursor.fetchone()[0]  
+            connection.commit()    
+        except (Exception, psycopg2.Error) as error :
+            print ("Update Inventory failed,", error)           
+   
+        finally:
+            #closing database connection.
+                if(connection):
+                    print("Update inventory successful,", flag, "updated to", self.newdata)
+                    pass      
+
+class windowUpdateModel(QtWidgets.QWidget):
+    
+    def __init__(self, connection):
+        QtWidgets.QWidget.__init__(self)
+        self.changes = ''
+        self.row_chg = -1
+        self.col_chg = -1
+        self.newdata = ''
+        self.model=''
+        self.setWindowTitle('Model')
+        layout = QtWidgets.QGridLayout()
+        self.tableView = QtWidgets.QTableView(self)
+
+        self.button = QtWidgets.QPushButton('Display')
+        self.button.clicked.connect(lambda: self.btn_clk(connection))
+
+        self.buttonUpdate = QtWidgets.QPushButton('Update')
+        self.buttonUpdate.clicked.connect(lambda: self.btn_Update(connection))
+        
+        layout.addWidget(self.button)
+        layout.addWidget(self.tableView)
+        layout.addWidget(self.buttonUpdate)
+        self.setLayout(layout)
+        
+    def btn_clk(self, connection):
+        df=pd.DataFrame()
+        try:  
+            
+            query2 = "select * from model;"
+            
+            df = pd.read_sql(query2, connection)                                        
+            
+            print("Table retrieved successfully in PostgreSQL ")
+            #print(df)
+        except (Exception, psycopg2.Error) as error :
+            print ("Error while connecting to PostgreSQL", error)
+        finally:
+            #closing database connection.
+                if(connection):      
+                    pass
+
+        #print(df)
+        self.model = DataFrameModel(df)
+        self.tableView.setModel(self.model)
+        #self.tableView.itemSelectionChanged.connect(self.on_selectionChanged)
+             
+    def btn_Update(self, connection):
+        self.changes = self.model._data
+        self.row_chg = self.model.rowchg
+        self.col_chg = self.model.colchg
+        self.newdata = self.model.newdata 
+        #print(self.row_chg, self.col_chg, self.newdata)
+        flag = ''
+        try:
+            cursor = connection.cursor()
+            if(self.col_chg==1):
+                login_sql = """UPDATE model
+                            SET "salePrice" = %s
+                            WHERE model."modelNumber" = %s;"""
+                cursor.execute(login_sql, (self.newdata, self.changes.iloc[self.row_chg, self.col_chg-1])) 
+                flag = "salePrice"
+
+            #role = cursor.fetchone()[0]  
+            connection.commit()    
+        except (Exception, psycopg2.Error) as error :
+            print ("Update Model failed,", error)           
+   
+        finally:
+            #closing database connection.
+                if(connection):
+                    print("Update model successful,", flag, "updated to", self.newdata)
+                    pass      
+
 class saleWindow (QtWidgets.QWidget):
 
     switch_viewUpdateCus = QtCore.pyqtSignal(psycopg2.extensions.connection)
@@ -112,6 +307,7 @@ class windowviewUpdateCus(QtWidgets.QWidget):
                 if(connection):
                     print("Update customer successful,", flag, "updated to", self.newdata)
                     pass
+                
 class windowcr8Order(QtWidgets.QWidget):
     def __init__(self, connection):
         QtWidgets.QWidget.__init__(self)
@@ -250,6 +446,7 @@ class Login(QtWidgets.QWidget):
 
     switch_SaleWindow = QtCore.pyqtSignal(psycopg2.extensions.connection)
     switch_AdminWindow = QtCore.pyqtSignal(str)
+    switch_EngrWindow = QtCore.pyqtSignal(psycopg2.extensions.connection)
     def __init__(self):
         QtWidgets.QWidget.__init__(self)
         self.setWindowTitle('Login')
@@ -323,6 +520,8 @@ class Login(QtWidgets.QWidget):
                 self.switch_AdminWindow.emit("Admin")
             elif 'sales' in role:
                 self.switch_SaleWindow.emit(connection)    
+            elif 'engineer' in role:
+                self.switch_EngrWindow.emit(connection)    
 
 
 class Controller:
@@ -334,6 +533,7 @@ class Controller:
         self.login = Login()
         self.login.switch_SaleWindow.connect(self.show_SaleWindow)
         self.login.switch_AdminWindow.connect(self.show_AdminWindow)
+        self.login.switch_EngrWindow.connect(self.show_EngrWindow)
         self.login.show()
 
     def show_SaleWindow(self, connection):
@@ -373,12 +573,24 @@ class Controller:
     
     def show_EngrWindow(self, connection):
         self.engr_Window = engrWindow(connection)
-        self.sale_Window.switch_updateInv.connect(self.show_window_updateInv(connection))
+        self.engr_Window.switch_updateInv.connect(lambda: self.show_window_updateInv(connection))
         self.engr_Window.switch_updateModel.connect(lambda: self.show_window_updateModel(connection))
         self.engr_Window.switch_employeeView.connect(lambda: self.show_window_employeeView(connection))
         self.login.close()
         self.engr_Window.show()
         self.engr_Window.setFixedSize(1080,720)
+       
+    def show_window_updateInv(self, connection):
+        self.updateInv_Window = windowUpdateInv(connection)
+        self.engr_Window.close()
+        self.updateInv_Window.show()
+        self.updateInv_Window.setFixedSize(1080,720)  
+     
+    def show_window_updateModel(self, connection):
+        self.updateModel_Window = windowUpdateModel(connection)
+        self.engr_Window.close()
+        self.updateModel_Window.show()
+        self.updateModel_Window.setFixedSize(1080,720)  
         
 class DataFrameModel(QtCore.QAbstractTableModel):
     def __init__(self, data, parent=None):
