@@ -35,8 +35,14 @@ class saleWindow (QtWidgets.QWidget):
         self.switch_salesReport.emit()      
         
 class windowviewUpdateCus(QtWidgets.QWidget):
+    
     def __init__(self, connection):
         QtWidgets.QWidget.__init__(self)
+        self.changes = ''
+        self.row_chg = -1
+        self.col_chg = -1
+        self.newdata = ''
+        self.model=''
         self.setWindowTitle('Customer')
         layout = QtWidgets.QGridLayout()
         self.tableView = QtWidgets.QTableView(self)
@@ -44,10 +50,14 @@ class windowviewUpdateCus(QtWidgets.QWidget):
         self.button = QtWidgets.QPushButton('Display')
         self.button.clicked.connect(lambda: self.btn_clk(connection))
 
+        self.buttonUpdate = QtWidgets.QPushButton('Update')
+        self.buttonUpdate.clicked.connect(lambda: self.btn_Update(connection))
+        
         layout.addWidget(self.button)
         layout.addWidget(self.tableView)
+        layout.addWidget(self.buttonUpdate)
         self.setLayout(layout)
-    
+        
     def btn_clk(self, connection):
         df=pd.DataFrame()
         try:  
@@ -64,13 +74,44 @@ class windowviewUpdateCus(QtWidgets.QWidget):
             #closing database connection.
                 if(connection):      
                     pass
-                    #connection.close()
-                    #print("PostgreSQL connection is closed")
-        #print(df)
-        model = DataFrameModel(df)
-        #print(model)
-        self.tableView.setModel(model)
 
+        #print(df)
+        self.model = DataFrameModel(df)
+        self.tableView.setModel(self.model)
+        #self.tableView.itemSelectionChanged.connect(self.on_selectionChanged)
+        
+        
+    def btn_Update(self, connection):
+        self.changes = self.model._data
+        self.row_chg = self.model.rowchg
+        self.col_chg = self.model.colchg
+        self.newdata = self.model.newdata 
+        #print(self.row_chg, self.col_chg, self.newdata)
+        flag = ''
+        try:
+            cursor = connection.cursor()
+            if(self.col_chg==1):
+                login_sql = """UPDATE customer
+                            SET "firstName" = %s
+                            WHERE customer."customerID" = %s;"""
+                cursor.execute(login_sql, (self.newdata, self.changes.iloc[self.row_chg, self.col_chg-1])) 
+                flag = "First Name"
+            elif(self.col_chg==2):
+                login_sql = """UPDATE customer
+                            SET "lastName" = %s
+                            WHERE customer."customerID" = %s;"""
+                cursor.execute(login_sql, (self.newdata, self.changes.iloc[self.row_chg, self.col_chg-2])) 
+                flag = "last Name"
+            #role = cursor.fetchone()[0]  
+            connection.commit()    
+        except (Exception, psycopg2.Error) as error :
+            print ("Create order failed,", error)           
+   
+        finally:
+            #closing database connection.
+                if(connection):
+                    print("Update customer successful,", flag, "updated to", self.newdata)
+                    pass
 class windowcr8Order(QtWidgets.QWidget):
     def __init__(self, connection):
         QtWidgets.QWidget.__init__(self)
@@ -85,7 +126,7 @@ class windowcr8Order(QtWidgets.QWidget):
  
         #vBox.setMargin(0)
         # orderNumber
-        self.orderNumber = QtWidgets.QLineEdit("ES345")
+        self.orderNumber = QtWidgets.QLineEdit("3234")
         hBox1.addWidget(QtWidgets.QLabel("orderNumber"))
         hBox1.addWidget(self.orderNumber)
     
@@ -110,34 +151,23 @@ class windowcr8Order(QtWidgets.QWidget):
         vBox.addLayout(hBox4)
         self.button = QtWidgets.QPushButton('Create new order')
         self.button.clicked.connect(lambda: self.btn_clk( connection,
-                                                        self.orderNumber.text(), 
-                                                       float(self.billCost.text()), 
-                                                       int(self.quantity.text()), 
-                                                       int(self.modelNumber.text())))
+                                                       self.orderNumber.text(), 
+                                                       self.billCost.text(),
+                                                       self.quantity.text(), 
+                                                       self.modelNumber.text()))
         vBox.addWidget(self.button)
         self.setLayout(vBox)
         
     def btn_clk(self, connection, orderNumber, billCost, quantity, modelNumber):
-
-        try:  
-            
-            connection = psycopg2.connect(user = "victor6643",
-                                          password = "pass", #Your password in psql
-                                          host = "127.0.0.1",
-                                          port = "5432",
-                                          database = "try4")   #Your db name
-        
+        try:   
             cursor = connection.cursor()
-            login_sql = """
-                        INSERT INTO orders
-                        VALUES (%s, %d, %d, %d);
-                        """
+            login_sql = 'INSERT INTO orders ("orderNumber", "billCost", quantity, "modelNumber") VALUES (%s, %s, %s, %s);'
    
-            cursor.execute(login_sql, [orderNumber, billCost, quantity, modelNumber]) #Login in ID add password
-            role = cursor.fetchone()[0]    
+            cursor.execute(login_sql, (orderNumber, billCost, quantity, modelNumber)) #Login in ID add password
+            #role = cursor.fetchone()[0]  
             connection.commit()    
         except (Exception, psycopg2.Error) as error :
-            print ("Error while connecting to PostgreSQL", error)           
+            print ("Create order failed,", error)           
    
         finally:
             #closing database connection.
@@ -287,7 +317,6 @@ class Login(QtWidgets.QWidget):
                     #print("PostgreSQL connection is closed")
         if(role):
             print("User Id and password found in database")
-            a=[role]
             #print(type(role), a)
             #Switch case for different type of user
             if 'admin' in role:
@@ -342,67 +371,68 @@ class Controller:
         self.admin_Window.show()
         self.admin_Window.setFixedSize(1080,720)
     
+    def show_EngrWindow(self, connection):
+        self.engr_Window = engrWindow(connection)
+        self.sale_Window.switch_updateInv.connect(self.show_window_updateInv(connection))
+        self.engr_Window.switch_updateModel.connect(lambda: self.show_window_updateModel(connection))
+        self.engr_Window.switch_employeeView.connect(lambda: self.show_window_employeeView(connection))
+        self.login.close()
+        self.engr_Window.show()
+        self.engr_Window.setFixedSize(1080,720)
+        
 class DataFrameModel(QtCore.QAbstractTableModel):
-    DtypeRole = QtCore.Qt.UserRole + 1000
-    ValueRole = QtCore.Qt.UserRole + 1001
+    def __init__(self, data, parent=None):
+        QtCore.QAbstractTableModel.__init__(self, parent)
+        self._data = data
+        self.rowchg=0
+        self.colchg=0
+        self.newdata=''
+            
+    def rowCount(self, parent=None):
+        return len(self._data.values)
 
-    def __init__(self, df=pd.DataFrame(), parent=None):
-        super(DataFrameModel, self).__init__(parent)
-        self._dataframe = df
-
-    def setDataFrame(self, dataframe):
-        self.beginResetModel()
-        self._dataframe = dataframe.copy()
-        self.endResetModel()
-
-    def dataFrame(self):
-        return self._dataframe
-
-    dataFrame = QtCore.pyqtProperty(pd.DataFrame, fget=dataFrame, fset=setDataFrame)
-
-    @QtCore.pyqtSlot(int, QtCore.Qt.Orientation, result=str)
-    def headerData(self, section: int, orientation: QtCore.Qt.Orientation, role: int = QtCore.Qt.DisplayRole):
-        if role == QtCore.Qt.DisplayRole:
-            if orientation == QtCore.Qt.Horizontal:
-                return self._dataframe.columns[section]
-            else:
-                return str(self._dataframe.index[section])
-        return QtCore.QVariant()
-
-    def rowCount(self, parent=QtCore.QModelIndex()):
-        if parent.isValid():
-            return 0
-        return len(self._dataframe.index)
-
-    def columnCount(self, parent=QtCore.QModelIndex()):
-        if parent.isValid():
-            return 0
-        return self._dataframe.columns.size
+    def columnCount(self, parent=None):
+        return self._data.columns.size
 
     def data(self, index, role=QtCore.Qt.DisplayRole):
-        if not index.isValid() or not (0 <= index.row() < self.rowCount() \
-            and 0 <= index.column() < self.columnCount()):
-            return QtCore.QVariant()
-        row = self._dataframe.index[index.row()]
-        col = self._dataframe.columns[index.column()]
-        dt = self._dataframe[col].dtype
+        if index.isValid():
+            if role == QtCore.Qt.DisplayRole:
+                return str(self._data.values[index.row()][index.column()])
+        return None
 
-        val = self._dataframe.iloc[row][col]
-        if role == QtCore.Qt.DisplayRole:
-            return str(val)
-        elif role == DataFrameModel.ValueRole:
-            return val
-        if role == DataFrameModel.DtypeRole:
-            return dt
-        return QtCore.QVariant()
+    def headerData(self, col, orientation, role):
+        if orientation == QtCore.Qt.Horizontal and role == QtCore.Qt.DisplayRole:
+            return self._data.columns[col]
+        return None
 
-    def roleNames(self):
-        roles = {
-            QtCore.Qt.DisplayRole: b'display',
-            DataFrameModel.DtypeRole: b'dtype',
-            DataFrameModel.ValueRole: b'value'
-        }
-        return roles
+    def setData(self, index, value, role):
+        if not index.isValid():
+            return False
+        if role != QtCore.Qt.EditRole:
+            return False
+        row = index.row()
+        if row < 0 or row >= len(self._data.values):
+            return False
+        column = index.column()
+        if column < 0 or column >= self._data.columns.size:
+            return False
+        self._data.iloc[row, column] = value
+        self.dataChanged.emit(index, index)    
+        #print(self.rowchg, self.colchg, self.newdata)
+        self.rowchg=row
+        self.colchg=column
+        self.newdata=value
+        #print(self.rowchg, self.colchg, self.newdata)
+        return True
+
+    def flags(self, index):
+        flags = super(self.__class__,self).flags(index)
+        flags |= QtCore.Qt.ItemIsEditable
+        flags |= QtCore.Qt.ItemIsSelectable
+        flags |= QtCore.Qt.ItemIsEnabled
+        flags |= QtCore.Qt.ItemIsDragEnabled
+        flags |= QtCore.Qt.ItemIsDropEnabled
+        return flags
     
 def main():
     app = QtWidgets.QApplication(sys.argv)
