@@ -7,7 +7,7 @@ class engrWindow (QtWidgets.QWidget):
 
     switch_updateInv = QtCore.pyqtSignal(psycopg2.extensions.connection)
     switch_updateModel = QtCore.pyqtSignal(psycopg2.extensions.connection)
-    switch_employeeView = QtCore.pyqtSignal(psycopg2.extensions.connection)  
+    switch_engrView = QtCore.pyqtSignal(psycopg2.extensions.connection)  
     
     def __init__(self, connection):
         QtWidgets.QWidget.__init__(self)
@@ -21,8 +21,8 @@ class engrWindow (QtWidgets.QWidget):
         self.button2.clicked.connect(lambda: self.switch2(connection))
         vBox.addWidget(self.button2)
         
-        self.button3 = QtWidgets.QPushButton('Limited view of employee')
-        self.button3.clicked.connect(self.switch3)
+        self.button3 = QtWidgets.QPushButton('Engineer view of employee')
+        self.button3.clicked.connect(lambda: self.switch3(connection))
         vBox.addWidget(self.button3)
         
         self.setLayout(vBox)
@@ -32,7 +32,7 @@ class engrWindow (QtWidgets.QWidget):
     def switch2(self, connection):
         self.switch_updateInv.emit(connection)      
     def switch3(self, connection):
-        self.switch_employeeView.emit(connection)  
+        self.switch_engrView.emit(connection)  
       
 class windowUpdateInv(QtWidgets.QWidget):
     
@@ -198,11 +198,49 @@ class windowUpdateModel(QtWidgets.QWidget):
                     print("Update model successful,", flag, "updated to", self.newdata)
                     pass      
 
+class windowEngrView(QtWidgets.QWidget):
+
+    def __init__(self, connection):
+        QtWidgets.QWidget.__init__(self)
+        self.setWindowTitle('Employee (Engineer View)')
+        layout = QtWidgets.QGridLayout()
+        self.tableView = QtWidgets.QTableView(self)
+
+
+        self.button = QtWidgets.QPushButton('Display')
+        self.button.clicked.connect(lambda: self.btn_clk(connection))
+
+        layout.addWidget(self.button)
+        layout.addWidget(self.tableView)
+        self.setLayout(layout)
+        
+    def btn_clk(self,connection):
+        df=""
+        try:         
+            query2 = "select * from engineer_view;"
+            
+            df = pd.read_sql(query2, connection)                                        
+            
+            print("Employee table retrieved successfully in PostgreSQL ")
+            #print(df)
+        except (Exception, psycopg2.Error) as error :
+            print ("Error while connecting to PostgreSQL", error)
+        finally:
+            #closing database connection.
+                if(connection):      
+                    pass
+                    #connection.close()
+                    #print("PostgreSQL connection is closed")
+        #print(df)
+        model = DataFrameModel(df)
+        #print(model)
+        self.tableView.setModel(model)
+        
 class saleWindow (QtWidgets.QWidget):
 
     switch_viewUpdateCus = QtCore.pyqtSignal(psycopg2.extensions.connection)
     switch_cr8Order = QtCore.pyqtSignal(psycopg2.extensions.connection)
-    switch_salesReport = QtCore.pyqtSignal()  
+    switch_salesReport = QtCore.pyqtSignal(psycopg2.extensions.connection)  
     
     def __init__(self, connection):
         QtWidgets.QWidget.__init__(self)
@@ -217,7 +255,7 @@ class saleWindow (QtWidgets.QWidget):
         vBox.addWidget(self.button2)
         
         self.button3 = QtWidgets.QPushButton('Access sales reports')
-        self.button3.clicked.connect(self.switch3)
+        self.button3.clicked.connect(lambda: self.switch3(connection))
         vBox.addWidget(self.button3)
         
         self.setLayout(vBox)
@@ -226,8 +264,8 @@ class saleWindow (QtWidgets.QWidget):
         self.switch_viewUpdateCus.emit(connection)      
     def switch2(self, connection):
         self.switch_cr8Order.emit(connection)
-    def switch3(self):
-        self.switch_salesReport.emit()      
+    def switch3(self, connection):
+        self.switch_salesReport.emit(connection)      
         
 class windowviewUpdateCus(QtWidgets.QWidget):
     
@@ -370,48 +408,39 @@ class windowcr8Order(QtWidgets.QWidget):
                 if(connection):
                     pass
         
-class WindowTwo(QtWidgets.QWidget):
+class windowSalesReport(QtWidgets.QWidget):
 
-    def __init__(self, text):
+    def __init__(self, connection):
         QtWidgets.QWidget.__init__(self)
-        self.setWindowTitle('Window Two')
+        self.setWindowTitle('Sales Report')
         layout = QtWidgets.QGridLayout()
         self.tableView = QtWidgets.QTableView(self)
 
-                            
-        self.label = QtWidgets.QLabel(text)
-        layout.addWidget(self.label)
 
         self.button = QtWidgets.QPushButton('Display')
-        self.button.clicked.connect(self.btn_clk)
+        self.button.clicked.connect(lambda: self.btn_clk(connection))
 
         layout.addWidget(self.button)
         layout.addWidget(self.tableView)
         self.setLayout(layout)
         
-    def btn_clk(self):
-        print("starts")
+    def btn_clk(self,connection):
         df=""
-        try:
-            connection = psycopg2.connect(user = "postgres",
-                                          password = "yuzhelim", #Your password in psql
-                                          host = "127.0.0.1",
-                                          port = "5432",
-                                          database = "try1")   #Your db name
-            
-            query2 = "select * from instructor;"
+        try:         
+            query2 = "select * from revenue_report;"
             
             df = pd.read_sql(query2, connection)                                        
             
-            print("Table retrieved successfully in PostgreSQL ")
+            print("Sales Report retrieved successfully in PostgreSQL ")
             #print(df)
         except (Exception, psycopg2.Error) as error :
             print ("Error while connecting to PostgreSQL", error)
         finally:
             #closing database connection.
-                if(connection):            
-                    connection.close()
-                    print("PostgreSQL connection is closed")
+                if(connection):      
+                    pass
+                    #connection.close()
+                    #print("PostgreSQL connection is closed")
         #print(df)
         model = DataFrameModel(df)
         #print(model)
@@ -538,7 +567,7 @@ class Controller:
 
     def show_SaleWindow(self, connection):
         self.sale_Window = saleWindow(connection)
-        #self.sale_Window.switch_salesReport.connect(self.show_window_salesReport)
+        self.sale_Window.switch_salesReport.connect(lambda: self.show_window_salesReport(connection))
         self.sale_Window.switch_viewUpdateCus.connect(lambda: self.show_window_viewUpdateCus(connection))
         self.sale_Window.switch_cr8Order.connect(lambda: self.show_window_cr8Order(connection))
         self.login.close()
@@ -557,12 +586,11 @@ class Controller:
         self.cr8Order_Window.show()
         self.cr8Order_Window.setFixedSize(1080,720)
         
-    def show_window_two(self, text):
-        self.window_two = WindowTwo(text)
-        self.admin_Window.close()
-        #self.sale_Window.close()
-        self.window_two.show()
-        self.window_two.setFixedSize(1080,720)
+    def show_window_salesReport(self, connection):
+        self.salesReport_Window = windowSalesReport(connection)
+        self.sale_Window.close()
+        self.salesReport_Window.show()
+        self.salesReport_Window.setFixedSize(1080,720)
     
     def show_AdminWindow(self, text):
         self.admin_Window = AdminWindow(text)
@@ -575,7 +603,7 @@ class Controller:
         self.engr_Window = engrWindow(connection)
         self.engr_Window.switch_updateInv.connect(lambda: self.show_window_updateInv(connection))
         self.engr_Window.switch_updateModel.connect(lambda: self.show_window_updateModel(connection))
-        self.engr_Window.switch_employeeView.connect(lambda: self.show_window_employeeView(connection))
+        self.engr_Window.switch_engrView.connect(lambda: self.show_window_engrView(connection))
         self.login.close()
         self.engr_Window.show()
         self.engr_Window.setFixedSize(1080,720)
@@ -591,6 +619,12 @@ class Controller:
         self.engr_Window.close()
         self.updateModel_Window.show()
         self.updateModel_Window.setFixedSize(1080,720)  
+    
+    def show_window_engrView(self, connection):
+        self.engrView_Window = windowEngrView(connection)
+        self.engr_Window.close()
+        self.engrView_Window.show()
+        self.engrView_Window.setFixedSize(1080,720)  
         
 class DataFrameModel(QtCore.QAbstractTableModel):
     def __init__(self, data, parent=None):
