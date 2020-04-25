@@ -616,20 +616,21 @@ class windowSalesReport(QtWidgets.QWidget):
 
 class AdminWindow(QtWidgets.QWidget):
     switch_adminView = QtCore.pyqtSignal(psycopg2.extensions.connection, str)
+    switch_cr8Emp = QtCore.pyqtSignal(psycopg2.extensions.connection)
     switch = QtCore.pyqtSignal(psycopg2.extensions.connection)
-
     def __init__(self, connection):
         QtWidgets.QWidget.__init__(self)
         self.setWindowTitle('Admin Page')
         vBox = QtWidgets.QVBoxLayout()
         self.cr8Employee_btn = QtWidgets.QPushButton('Create a new employee')
-        self.cr8Employee_btn.clicked.connect(self.switch)
+        self.cr8Employee_btn.clicked.connect(lambda: self.switch_cr8Emp_btn(connection))
         vBox.addWidget(self.cr8Employee_btn)
+        
         self.setupTable_btn = QtWidgets.QPushButton('Set up table')
-        self.setupTable_btn.clicked.connect(self.switch)
+        self.setupTable_btn.clicked.connect(self.switch1)
         vBox.addWidget(self.setupTable_btn)
         self.grantAccess_btn = QtWidgets.QPushButton('Grant Access')
-        self.grantAccess_btn.clicked.connect(self.switch)
+        self.grantAccess_btn.clicked.connect(self.switch1)
         vBox.addWidget(self.grantAccess_btn)
         
         self.btn1 = QtWidgets.QPushButton('Employee and model expense')
@@ -653,9 +654,105 @@ class AdminWindow(QtWidgets.QWidget):
     def switch_view(self, connection, view_sql):
         self.switch_adminView.emit(connection, view_sql)
 
-    def switch(self, connection):
-        self.switch_adminView.emit(connection)
+    def switch_cr8Emp_btn(self, connection):
+        self.switch_cr8Emp.emit(connection)
+    
+    def switch1(self, connection):
+        self.show_window_cr8Emp.emit(connection)
         
+class windowcr8Emp(QtWidgets.QWidget):
+    def __init__(self, connection):
+        QtWidgets.QWidget.__init__(self)
+        self.setWindowTitle('Orders')
+
+        vBox = QtWidgets.QVBoxLayout()
+        hBox1 = QtWidgets.QHBoxLayout()
+        hBox2 = QtWidgets.QHBoxLayout()
+        hBox3 = QtWidgets.QHBoxLayout()
+        hBox4 = QtWidgets.QHBoxLayout()
+        hBox5 = QtWidgets.QHBoxLayout()
+        hBox6 = QtWidgets.QHBoxLayout()
+        hBox7 = QtWidgets.QHBoxLayout()
+        hBox8 = QtWidgets.QHBoxLayout()
+        hBox9 = QtWidgets.QHBoxLayout()
+        vBox.setSpacing(-20)
+        
+        self.employeeID = QtWidgets.QLineEdit("1000")
+        hBox1.addWidget(QtWidgets.QLabel("Employee ID"))
+        hBox1.addWidget(self.employeeID)
+        
+        self.fname = QtWidgets.QLineEdit("John")
+        hBox2.addWidget(QtWidgets.QLabel("First name"))
+        hBox2.addWidget(self.fname)
+
+        self.lname = QtWidgets.QLineEdit("Doe")
+        hBox3.addWidget(QtWidgets.QLabel("Last name"))
+        hBox3.addWidget(self.lname)
+
+        self.ssn = QtWidgets.QLineEdit("1234")
+        hBox4.addWidget(QtWidgets.QLabel("SSN"))
+        hBox4.addWidget(self.ssn)
+
+        self.salary = QtWidgets.QLineEdit("2000")
+        hBox5.addWidget(QtWidgets.QLabel("salary"))
+        hBox5.addWidget(self.salary)
+
+        self.payType = QtWidgets.QLineEdit("cash")
+        hBox6.addWidget(QtWidgets.QLabel("Pay Type"))
+        hBox6.addWidget(self.payType)
+        
+        self.jobType = QtWidgets.QLineEdit("engineer")
+        hBox7.addWidget(QtWidgets.QLabel("Job Type"))
+        hBox7.addWidget(self.jobType)
+        
+        self.userID = QtWidgets.QLineEdit("6789")
+        hBox8.addWidget(QtWidgets.QLabel("userID"))
+        hBox8.addWidget(self.userID)
+        
+        self.bonus = QtWidgets.QLineEdit("20")
+        hBox9.addWidget(QtWidgets.QLabel("bonus"))
+        hBox9.addWidget(self.bonus)
+        
+        vBox.addLayout(hBox1)
+        vBox.addLayout(hBox2)
+        vBox.addLayout(hBox3)
+        vBox.addLayout(hBox4)
+        vBox.addLayout(hBox5)
+        vBox.addLayout(hBox6)
+        vBox.addLayout(hBox7)
+        vBox.addLayout(hBox8)
+        vBox.addLayout(hBox9)
+        self.button = QtWidgets.QPushButton('Create new order')
+        self.button.clicked.connect(lambda: self.btn_clk( connection,
+                                                       self.employeeID.text(), 
+                                                       self.fname.text(),
+                                                       self.lname.text(), 
+                                                       self.ssn.text(),
+                                                       self.salary.text(), 
+                                                       self.payType.text(),
+                                                       self.jobType.text(), 
+                                                       self.userID.text(),
+                                                       self.bonus.text(),
+                                                       ))
+        vBox.addWidget(self.button)
+        self.setLayout(vBox)
+        
+    def btn_clk(self, connection, employeeID, fname, lname, ssn, salary, payType, jobType, userID, bonus):
+        try:   
+            cursor = connection.cursor()
+            login_sql = 'INSERT INTO employee ("employeeID", "firstName", "lastName", "SSN", salary, "payType", "jobType", "userID", bonus) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s);'
+   
+            cursor.execute(login_sql, (employeeID, fname, lname, ssn, salary, payType, jobType, userID, bonus)) #Login in ID add password
+            #role = cursor.fetchone()[0]  
+            connection.commit()    
+        except (Exception, psycopg2.Error) as error :
+            print ("Create employee failed,", error)           
+   
+        finally:
+            #closing database connection.
+                if(connection):
+                    print("Employee created successfully")
+                
 class windowAdminView(QtWidgets.QWidget):
     def __init__(self, connection, view_sql):
         QtWidgets.QWidget.__init__(self)
@@ -839,9 +936,17 @@ class Controller:
     def show_AdminWindow(self, connection):
         self.admin_Window = AdminWindow(connection)
         self.admin_Window.switch_adminView.connect(self.show_window_adminView)
+        self.admin_Window.switch_cr8Emp.connect(lambda: self.show_window_cr8Emp(connection))
+        self.admin_Window.switch.connect(lambda: self.show_window_cr8Emp(connection))
         self.login.close()
         self.admin_Window.show()
         self.admin_Window.setFixedSize(1080,720)
+
+    def show_window_cr8Emp(self, connection):
+        self.cr8Emp_Window = windowcr8Emp(connection)
+        self.admin_Window.close()
+        self.cr8Emp_Window.show()
+        self.cr8Emp_Window.setFixedSize(1080,720)
         
     def show_window_adminView(self, connection, view_sql):
         self.adminView_Window = windowAdminView(connection, view_sql)
