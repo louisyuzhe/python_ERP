@@ -615,10 +615,10 @@ class windowSalesReport(QtWidgets.QWidget):
         self.tableView.setModel(model)
 
 class AdminWindow(QtWidgets.QWidget):
+    switch_adminView = QtCore.pyqtSignal(psycopg2.extensions.connection, str)
+    switch = QtCore.pyqtSignal(psycopg2.extensions.connection)
 
-    switch_window = QtCore.pyqtSignal(str)
-
-    def __init__(self, text):
+    def __init__(self, connection):
         QtWidgets.QWidget.__init__(self)
         self.setWindowTitle('Admin Page')
         vBox = QtWidgets.QVBoxLayout()
@@ -631,18 +631,91 @@ class AdminWindow(QtWidgets.QWidget):
         self.grantAccess_btn = QtWidgets.QPushButton('Grant Access')
         self.grantAccess_btn.clicked.connect(self.switch)
         vBox.addWidget(self.grantAccess_btn)
-        self.BusinessReport_btn = QtWidgets.QPushButton('Access and create the business report')
-        self.BusinessReport_btn.clicked.connect(self.switch)
-        vBox.addWidget(self.BusinessReport_btn)
+        
+        self.btn1 = QtWidgets.QPushButton('Employee and model expense')
+        self.btn1.clicked.connect(lambda: self.switch_view(connection, "employee_expense"))
+        vBox.addWidget(self.btn1)
+        
+        self.btn2 = QtWidgets.QPushButton('Frequency Report')
+        self.btn2.clicked.connect(lambda: self.switch_view(connection, "frequency_report"))
+        vBox.addWidget(self.btn2)
+        
+        self.btn3 = QtWidgets.QPushButton('Order Report')
+        self.btn3.clicked.connect(lambda: self.switch_view(connection, "order_report"))
+        vBox.addWidget(self.btn3)
+        
+        self.btn4 = QtWidgets.QPushButton('Revenue Report')
+        self.btn4.clicked.connect(lambda: self.switch_view(connection, "revenue_report"))
+        vBox.addWidget(self.btn4)
+        
         self.setLayout(vBox)
 
-    def switch(self):
-        self.switch_window.emit("TEST")
+    def switch_view(self, connection, view_sql):
+        self.switch_adminView.emit(connection, view_sql)
+
+    def switch(self, connection):
+        self.switch_adminView.emit(connection)
         
+class windowAdminView(QtWidgets.QWidget):
+    def __init__(self, connection, view_sql):
+        QtWidgets.QWidget.__init__(self)
+        if(view_sql == "employee_expense"):
+            self.setWindowTitle("Employee and model expense")
+        else:
+            self.setWindowTitle(view_sql)
+        layout = QtWidgets.QGridLayout()
+        
+        self.tableView = QtWidgets.QTableView(self)
+        
+        self.button = QtWidgets.QPushButton('Display')
+        self.button.clicked.connect(lambda: self.btn_clk(connection, view_sql))
+
+        layout.addWidget(self.button)
+        layout.addWidget(self.tableView)
+        if(view_sql == "employee_expense"):
+            self.tableView2 = QtWidgets.QTableView(self)
+            layout.addWidget(self.tableView2)
+        self.setLayout(layout)
+        
+    def btn_clk(self,connection, view_sql):
+        df=""
+        try:         
+            query2 = "select * from "+view_sql+";"
+            print(query2)
+            df = pd.read_sql(query2, connection)                                        
+            
+            print(view_sql+ " retrieved successfully in PostgreSQL")
+            #print(df)
+        except (Exception, psycopg2.Error) as error :
+            print ("Error while connecting to PostgreSQL", error)
+        finally:
+            #closing database connection.
+                if(connection):      
+                    pass
+        model = DataFrameModel(df)
+        self.tableView.setModel(model)
+        
+        if(view_sql == "employee_expense"):
+            try:         
+                query1 = "select * from model_expense;"
+                print(query1)
+                df = pd.read_sql(query1, connection)                                        
+                
+                print(view_sql+ " retrieved successfully in PostgreSQL")
+                #print(df)
+            except (Exception, psycopg2.Error) as error :
+                print ("Error while connecting to PostgreSQL", error)
+            finally:
+                #closing database connection.
+                    if(connection):      
+                        pass
+            model2 = DataFrameModel(df)
+            self.tableView2.setModel(model2)
+            
 class Login(QtWidgets.QWidget):
 
     switch_SaleWindow = QtCore.pyqtSignal(psycopg2.extensions.connection)
-    switch_AdminWindow = QtCore.pyqtSignal(str)
+    switch_AdminWindow = QtCore.pyqtSignal(psycopg2.extensions.connection)
     switch_EngrWindow = QtCore.pyqtSignal(psycopg2.extensions.connection)
     switch_hrWindow = QtCore.pyqtSignal(psycopg2.extensions.connection)
     def __init__(self):
@@ -652,7 +725,7 @@ class Login(QtWidgets.QWidget):
         vBox = QtWidgets.QVBoxLayout()
         
         # Username
-        self.username = QtWidgets.QLineEdit("John Doe")
+        self.username = QtWidgets.QLineEdit("admin1")
         vBox.addWidget(QtWidgets.QLabel("Username"))
         vBox.addWidget(self.username)
     
@@ -715,7 +788,7 @@ class Login(QtWidgets.QWidget):
             #print(type(role), a)
             #Switch case for different type of user
             if 'admin' in role:
-                self.switch_AdminWindow.emit("Admin")
+                self.switch_AdminWindow.emit(connection)
             elif 'sales' in role:
                 self.switch_SaleWindow.emit(connection)    
             elif 'engineer' in role:
@@ -763,12 +836,18 @@ class Controller:
         self.salesReport_Window.show()
         self.salesReport_Window.setFixedSize(1080,720)
     
-    def show_AdminWindow(self, text):
-        self.admin_Window = AdminWindow(text)
-        self.admin_Window.switch_window.connect(self.show_window_two)
+    def show_AdminWindow(self, connection):
+        self.admin_Window = AdminWindow(connection)
+        self.admin_Window.switch_adminView.connect(self.show_window_adminView)
         self.login.close()
         self.admin_Window.show()
         self.admin_Window.setFixedSize(1080,720)
+        
+    def show_window_adminView(self, connection, view_sql):
+        self.adminView_Window = windowAdminView(connection, view_sql)
+        self.admin_Window.close()
+        self.adminView_Window.show()
+        self.adminView_Window.setFixedSize(1080,720)  
     
     def show_EngrWindow(self, connection):
         self.engr_Window = engrWindow(connection)
