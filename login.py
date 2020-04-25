@@ -617,7 +617,9 @@ class windowSalesReport(QtWidgets.QWidget):
 class AdminWindow(QtWidgets.QWidget):
     switch_adminView = QtCore.pyqtSignal(psycopg2.extensions.connection, str)
     switch_cr8Emp = QtCore.pyqtSignal(psycopg2.extensions.connection)
-    switch = QtCore.pyqtSignal(psycopg2.extensions.connection)
+    switch_setupTable = QtCore.pyqtSignal(psycopg2.extensions.connection)
+    switch_grantView = QtCore.pyqtSignal(psycopg2.extensions.connection)
+    
     def __init__(self, connection):
         QtWidgets.QWidget.__init__(self)
         self.setWindowTitle('Admin Page')
@@ -627,10 +629,11 @@ class AdminWindow(QtWidgets.QWidget):
         vBox.addWidget(self.cr8Employee_btn)
         
         self.setupTable_btn = QtWidgets.QPushButton('Set up table')
-        self.setupTable_btn.clicked.connect(self.switch1)
+        self.setupTable_btn.clicked.connect(lambda: self.switch_setuptable_btn(connection))
         vBox.addWidget(self.setupTable_btn)
+    
         self.grantAccess_btn = QtWidgets.QPushButton('Grant Access')
-        self.grantAccess_btn.clicked.connect(self.switch1)
+        self.grantAccess_btn.clicked.connect(lambda: self.switch_grantAccess_btn(connection))
         vBox.addWidget(self.grantAccess_btn)
         
         self.btn1 = QtWidgets.QPushButton('Employee and model expense')
@@ -656,14 +659,17 @@ class AdminWindow(QtWidgets.QWidget):
 
     def switch_cr8Emp_btn(self, connection):
         self.switch_cr8Emp.emit(connection)
-    
-    def switch1(self, connection):
-        self.show_window_cr8Emp.emit(connection)
+        
+    def switch_grantAccess_btn(self, connection):
+        self.switch_grantView.emit(connection)
+        
+    def switch_setuptable_btn(self, connection):
+        self.switch_setupTable.emit(connection)
         
 class windowcr8Emp(QtWidgets.QWidget):
     def __init__(self, connection):
         QtWidgets.QWidget.__init__(self)
-        self.setWindowTitle('Orders')
+        self.setWindowTitle('Create Employee')
 
         vBox = QtWidgets.QVBoxLayout()
         hBox1 = QtWidgets.QHBoxLayout()
@@ -752,7 +758,97 @@ class windowcr8Emp(QtWidgets.QWidget):
             #closing database connection.
                 if(connection):
                     print("Employee created successfully")
-                
+                    
+                    
+    
+class windowSetupTable(QtWidgets.QWidget):
+    def __init__(self, connection):
+        QtWidgets.QWidget.__init__(self)
+        self.setWindowTitle('Table')
+
+        vBox = QtWidgets.QVBoxLayout()
+        hBox1 = QtWidgets.QHBoxLayout()
+        hBox2 = QtWidgets.QHBoxLayout()
+        vBox.setSpacing(-20) 
+        
+        self.tableName = QtWidgets.QLineEdit("Table1")
+        hBox1.addWidget(QtWidgets.QLabel("Table name"))
+        hBox1.addWidget(self.tableName)
+        
+        self.columns = QtWidgets.QLineEdit("column1 int, column2 varchar(255)")
+        hBox2.addWidget(QtWidgets.QLabel("column and datatype"))
+        hBox2.addWidget(self.columns)
+        
+        vBox.addLayout(hBox1)
+        vBox.addLayout(hBox2)
+
+        self.button = QtWidgets.QPushButton('Create new table')
+        self.button.clicked.connect(lambda: self.btn_clk(connection,
+                                                       self.tableName.text(), 
+                                                       self.columns.text()))
+        vBox.addWidget(self.button)
+        self.setLayout(vBox)
+        
+    def btn_clk(self, connection, tableName, columns):
+        try:   
+            cursor = connection.cursor()
+            login_sql = "CREATE TABLE " + tableName+ " ("+columns+");"
+   
+            cursor.execute(login_sql) #table and columns
+            #role = cursor.fetchone()[0]  
+            connection.commit()    
+        except (Exception, psycopg2.Error) as error :
+            print ("Create table failed,", error)           
+   
+        finally:
+            #closing database connection.
+                if(connection):
+                    print("New table created successfully")                    
+
+    
+class windowGrantView(QtWidgets.QWidget):
+    def __init__(self, connection):
+        QtWidgets.QWidget.__init__(self)
+        self.setWindowTitle('Grant Access')
+
+        vBox = QtWidgets.QVBoxLayout()
+        hBox1 = QtWidgets.QHBoxLayout()
+        hBox2 = QtWidgets.QHBoxLayout()
+        vBox.setSpacing(-20) 
+        
+        self.viewName = QtWidgets.QLineEdit("select on customer")
+        hBox1.addWidget(QtWidgets.QLabel("Type of access to relation/ Role"))
+        hBox1.addWidget(self.viewName)
+        
+        self.roleName = QtWidgets.QLineEdit("hr")
+        hBox2.addWidget(QtWidgets.QLabel("Role/ User"))
+        hBox2.addWidget(self.roleName)
+        
+        vBox.addLayout(hBox1)
+        vBox.addLayout(hBox2)
+
+        self.button = QtWidgets.QPushButton('Grant Access')
+        self.button.clicked.connect(lambda: self.btn_clk(connection,
+                                                       self.viewName.text(), 
+                                                       self.roleName.text()))
+        vBox.addWidget(self.button)
+        self.setLayout(vBox)
+        
+    def btn_clk(self, connection, viewName, roleName):
+        try:   
+            cursor = connection.cursor()
+            login_sql = "GRANT "+viewName+" TO "+roleName+";"
+   
+            cursor.execute(login_sql) #table and columns
+            connection.commit()    
+        except (Exception, psycopg2.Error) as error :
+            print ("Grant access failed,", error)           
+   
+        finally:
+            #closing database connection.
+                if(connection):
+                    print("Access granted")       
+    
 class windowAdminView(QtWidgets.QWidget):
     def __init__(self, connection, view_sql):
         QtWidgets.QWidget.__init__(self)
@@ -937,7 +1033,8 @@ class Controller:
         self.admin_Window = AdminWindow(connection)
         self.admin_Window.switch_adminView.connect(self.show_window_adminView)
         self.admin_Window.switch_cr8Emp.connect(lambda: self.show_window_cr8Emp(connection))
-        self.admin_Window.switch.connect(lambda: self.show_window_cr8Emp(connection))
+        self.admin_Window.switch_grantView.connect(lambda: self.show_window_grantView(connection))
+        self.admin_Window.switch_setupTable.connect(lambda: self.show_window_setupTable(connection))
         self.login.close()
         self.admin_Window.show()
         self.admin_Window.setFixedSize(1080,720)
@@ -947,6 +1044,18 @@ class Controller:
         self.admin_Window.close()
         self.cr8Emp_Window.show()
         self.cr8Emp_Window.setFixedSize(1080,720)
+    
+    def show_window_setupTable(self, connection):
+        self.setupTable_Window = windowSetupTable(connection)
+        self.admin_Window.close()
+        self.setupTable_Window.show()
+        self.setupTable_Window.setFixedSize(1080,720)
+    
+    def show_window_grantView(self, connection):
+        self.grantView_Window = windowGrantView(connection)
+        self.admin_Window.close()
+        self.grantView_Window.show()
+        self.grantView_Window.setFixedSize(1080,720)
         
     def show_window_adminView(self, connection, view_sql):
         self.adminView_Window = windowAdminView(connection, view_sql)
