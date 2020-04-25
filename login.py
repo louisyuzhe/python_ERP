@@ -3,6 +3,174 @@ from PyQt5 import QtCore, QtWidgets
 import psycopg2
 import pandas as pd
 
+class hrWindow (QtWidgets.QWidget):
+
+    switch_updateEmp = QtCore.pyqtSignal(psycopg2.extensions.connection)
+    switch_EmpSales = QtCore.pyqtSignal(psycopg2.extensions.connection)
+    
+    def __init__(self, connection):
+        QtWidgets.QWidget.__init__(self)
+        self.setWindowTitle('HR Page')
+        vBox = QtWidgets.QVBoxLayout()
+        self.button1 = QtWidgets.QPushButton('Access and update of employee information')
+        self.button1.clicked.connect(lambda: self.switch1(connection))
+        vBox.addWidget(self.button1)
+        
+        self.button2 = QtWidgets.QPushButton('View of employee and associated sales number')
+        self.button2.clicked.connect(lambda: self.switch2(connection))
+        vBox.addWidget(self.button2)
+        
+        self.setLayout(vBox)
+    
+    def switch1(self, connection):
+        self.switch_updateEmp.emit(connection)        
+    def switch2(self, connection):
+        self.switch_EmpSales.emit(connection)      
+
+  
+class windowUpdateEmp(QtWidgets.QWidget):
+    
+    def __init__(self, connection):
+        QtWidgets.QWidget.__init__(self)
+        self.changes = ''
+        self.row_chg = -1
+        self.col_chg = -1
+        self.newdata = ''
+        self.model=''
+        self.setWindowTitle('Employee')
+        layout = QtWidgets.QGridLayout()
+        self.tableView = QtWidgets.QTableView(self)
+
+        self.button = QtWidgets.QPushButton('Display')
+        self.button.clicked.connect(lambda: self.btn_clk(connection))
+
+        self.buttonUpdate = QtWidgets.QPushButton('Update')
+        self.buttonUpdate.clicked.connect(lambda: self.btn_Update(connection))
+        
+        layout.addWidget(self.button)
+        layout.addWidget(self.tableView)
+        layout.addWidget(self.buttonUpdate)
+        self.setLayout(layout)
+        
+    def btn_clk(self, connection):
+        df=pd.DataFrame()
+        try:  
+            
+            query2 = "select * from employee;"
+            
+            df = pd.read_sql(query2, connection)                                        
+            
+            print("Table retrieved successfully in PostgreSQL ")
+            #print(df)
+        except (Exception, psycopg2.Error) as error :
+            print ("Error while connecting to PostgreSQL", error)
+        finally:
+            #closing database connection.
+                if(connection):      
+                    pass
+
+        #print(df)
+        self.model = DataFrameModel(df)
+        self.tableView.setModel(self.model)
+        #self.tableView.itemSelectionChanged.connect(self.on_selectionChanged)
+             
+    def btn_Update(self, connection):
+        self.changes = self.model._data
+        self.row_chg = self.model.rowchg
+        self.col_chg = self.model.colchg
+        self.newdata = self.model.newdata 
+        #print(self.row_chg, self.col_chg, self.newdata)
+        flag = ''
+        try:
+            cursor = connection.cursor()
+            if(self.col_chg==1):
+                login_sql = """UPDATE employee
+                            SET "firstName" = %s
+                            WHERE employee."employeeID" = %s;"""
+                cursor.execute(login_sql, (self.newdata, str(self.changes.iloc[self.row_chg, self.col_chg-1]))) 
+                flag = "first Name"
+            elif(self.col_chg==2):
+                login_sql = """UPDATE employee
+                            SET "lastName" = %s
+                            WHERE employee."employeeID"" = %s;"""
+                cursor.execute(login_sql, (self.newdata, str(self.changes.iloc[self.row_chg, self.col_chg-2]))) 
+                flag = "last Name"
+            elif(self.col_chg==3):
+                login_sql = """UPDATE employee
+                            SET "SSN" = %s
+                            WHERE employee."employeeID" = %s;"""
+                cursor.execute(login_sql, (self.newdata, int(self.changes.iloc[self.row_chg, self.col_chg-3]))) 
+                flag = "SSN"
+            elif(self.col_chg==4):
+                login_sql = """UPDATE employee
+                            SET salary = %s
+                            WHERE employee."employeeID" = %s;"""
+                cursor.execute(login_sql, (self.newdata, int(self.changes.iloc[self.row_chg, self.col_chg-4]))) 
+                flag = "salary"
+            elif(self.col_chg==5):
+                login_sql = """UPDATE employee
+                            SET "payType" = %s
+                            WHERE employee."employeeID" = %s;"""
+                cursor.execute(login_sql, (self.newdata, str(self.changes.iloc[self.row_chg, self.col_chg-5]))) 
+                flag = "payType"
+            elif(self.col_chg==6):
+                login_sql = """UPDATE employee
+                            SET "jobType" = %s
+                            WHERE employee."employeeID" = %s;"""
+                cursor.execute(login_sql, (self.newdata, str(self.changes.iloc[self.row_chg, self.col_chg-6]))) 
+                flag = "jobType"
+            elif(self.col_chg==8):
+                login_sql = """UPDATE employee
+                            SET bonus = %s
+                            WHERE employee."employeeID" = %s;"""
+                cursor.execute(login_sql, (self.newdata, int(self.changes.iloc[self.row_chg, self.col_chg-8]))) 
+                flag = "bonus"
+
+            connection.commit()    
+        except (Exception, psycopg2.Error) as error :
+            print ("Update Employee failed,", error)           
+   
+        finally:
+            #closing database connection.
+                if(connection):
+                    print("Update employee successful,", flag, "updated to", self.newdata)
+                    pass      
+  
+class windowEmpSales(QtWidgets.QWidget):
+
+    def __init__(self, connection):
+        QtWidgets.QWidget.__init__(self)
+        self.setWindowTitle('Employee and associated sales number')
+        layout = QtWidgets.QGridLayout()
+        self.tableView = QtWidgets.QTableView(self)
+
+
+        self.button = QtWidgets.QPushButton('Display')
+        self.button.clicked.connect(lambda: self.btn_clk(connection))
+
+        layout.addWidget(self.button)
+        layout.addWidget(self.tableView)
+        self.setLayout(layout)
+        
+    def btn_clk(self,connection):
+        df=""
+        try:         
+            query2 = "select * from employee_sales;"
+            
+            df = pd.read_sql(query2, connection)                                        
+            
+            print("employee_sales table retrieved successfully in PostgreSQL ")
+            #print(df)
+        except (Exception, psycopg2.Error) as error :
+            print ("Error while connecting to PostgreSQL", error)
+        finally:
+            #closing database connection.
+                if(connection):      
+                    pass
+        model = DataFrameModel(df)
+        self.tableView.setModel(model)
+
+
 class engrWindow (QtWidgets.QWidget):
 
     switch_updateInv = QtCore.pyqtSignal(psycopg2.extensions.connection)
@@ -476,6 +644,7 @@ class Login(QtWidgets.QWidget):
     switch_SaleWindow = QtCore.pyqtSignal(psycopg2.extensions.connection)
     switch_AdminWindow = QtCore.pyqtSignal(str)
     switch_EngrWindow = QtCore.pyqtSignal(psycopg2.extensions.connection)
+    switch_hrWindow = QtCore.pyqtSignal(psycopg2.extensions.connection)
     def __init__(self):
         QtWidgets.QWidget.__init__(self)
         self.setWindowTitle('Login')
@@ -551,7 +720,8 @@ class Login(QtWidgets.QWidget):
                 self.switch_SaleWindow.emit(connection)    
             elif 'engineer' in role:
                 self.switch_EngrWindow.emit(connection)    
-
+            elif 'hr' in role:
+                self.switch_hrWindow.emit(connection)  
 
 class Controller:
 
@@ -563,6 +733,7 @@ class Controller:
         self.login.switch_SaleWindow.connect(self.show_SaleWindow)
         self.login.switch_AdminWindow.connect(self.show_AdminWindow)
         self.login.switch_EngrWindow.connect(self.show_EngrWindow)
+        self.login.switch_hrWindow.connect(self.show_HrWindow)
         self.login.show()
 
     def show_SaleWindow(self, connection):
@@ -625,6 +796,26 @@ class Controller:
         self.engr_Window.close()
         self.engrView_Window.show()
         self.engrView_Window.setFixedSize(1080,720)  
+    
+    def show_HrWindow(self, connection):
+        self.hr_Window = hrWindow(connection)
+        self.hr_Window.switch_updateEmp.connect(lambda: self.show_window_updateEmp(connection))
+        self.hr_Window.switch_EmpSales.connect(lambda: self.show_window_EmpSales(connection))
+        self.login.close()
+        self.hr_Window.show()
+        self.hr_Window.setFixedSize(1080,720)
+        
+    def show_window_updateEmp(self, connection):
+        self.updateEmp_Window = windowUpdateEmp(connection)
+        self.hr_Window.close()
+        self.updateEmp_Window.show()
+        self.updateEmp_Window.setFixedSize(1080,720)  
+
+    def show_window_EmpSales(self, connection):
+        self.empSales_Window = windowEmpSales(connection)
+        self.hr_Window.close()
+        self.empSales_Window.show()
+        self.empSales_Window.setFixedSize(1080,720)  
         
 class DataFrameModel(QtCore.QAbstractTableModel):
     def __init__(self, data, parent=None):
