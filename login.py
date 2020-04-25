@@ -29,6 +29,7 @@ class hrWindow (QtWidgets.QWidget):
 
   
 class windowUpdateEmp(QtWidgets.QWidget):
+    switch_back = QtCore.pyqtSignal(psycopg2.extensions.connection)
     
     def __init__(self, connection):
         QtWidgets.QWidget.__init__(self)
@@ -47,10 +48,17 @@ class windowUpdateEmp(QtWidgets.QWidget):
         self.buttonUpdate = QtWidgets.QPushButton('Update')
         self.buttonUpdate.clicked.connect(lambda: self.btn_Update(connection))
         
+        self.backbtn = QtWidgets.QPushButton('Back')
+        self.backbtn.clicked.connect(lambda: self.btn_back(connection))
+        
         layout.addWidget(self.button)
         layout.addWidget(self.tableView)
         layout.addWidget(self.buttonUpdate)
+        layout.addWidget(self.backbtn)
         self.setLayout(layout)
+    
+    def btn_back(self, connection):
+        self.switch_back.emit(connection)      
         
     def btn_clk(self, connection):
         df=pd.DataFrame()
@@ -92,7 +100,7 @@ class windowUpdateEmp(QtWidgets.QWidget):
             elif(self.col_chg==2):
                 login_sql = """UPDATE employee
                             SET "lastName" = %s
-                            WHERE employee."employeeID"" = %s;"""
+                            WHERE employee."employeeID" = %s;"""
                 cursor.execute(login_sql, (self.newdata, str(self.changes.iloc[self.row_chg, self.col_chg-2]))) 
                 flag = "last Name"
             elif(self.col_chg==3):
@@ -137,7 +145,7 @@ class windowUpdateEmp(QtWidgets.QWidget):
                     pass      
   
 class windowEmpSales(QtWidgets.QWidget):
-
+    switch_back = QtCore.pyqtSignal(psycopg2.extensions.connection)
     def __init__(self, connection):
         QtWidgets.QWidget.__init__(self)
         self.setWindowTitle('Employee and associated sales number')
@@ -147,10 +155,15 @@ class windowEmpSales(QtWidgets.QWidget):
 
         self.button = QtWidgets.QPushButton('Display')
         self.button.clicked.connect(lambda: self.btn_clk(connection))
-
+        self.backbtn = QtWidgets.QPushButton('Back')
+        self.backbtn.clicked.connect(lambda: self.btn_back(connection))
         layout.addWidget(self.button)
         layout.addWidget(self.tableView)
+        layout.addWidget(self.backbtn)
         self.setLayout(layout)
+    
+    def btn_back(self, connection):
+        self.switch_back.emit(connection)      
         
     def btn_clk(self,connection):
         df=""
@@ -992,7 +1005,8 @@ class Login(QtWidgets.QWidget):
 class Controller:
 
     def __init__(self):
-        pass
+        self.updateEmp_Window = None
+        self.empSales_Window = None
 
     def show_login(self):
         self.login = Login()
@@ -1095,17 +1109,23 @@ class Controller:
         self.hr_Window.switch_updateEmp.connect(lambda: self.show_window_updateEmp(connection))
         self.hr_Window.switch_EmpSales.connect(lambda: self.show_window_EmpSales(connection))
         self.login.close()
+        if self.updateEmp_Window is not None:
+            self.updateEmp_Window.close()
+        if self.empSales_Window is not None:
+            self.empSales_Window.close()
         self.hr_Window.show()
         self.hr_Window.setFixedSize(1080,720)
         
     def show_window_updateEmp(self, connection):
         self.updateEmp_Window = windowUpdateEmp(connection)
+        self.updateEmp_Window.switch_back.connect(lambda: self.show_HrWindow(connection))
         self.hr_Window.close()
         self.updateEmp_Window.show()
         self.updateEmp_Window.setFixedSize(1080,720)  
 
     def show_window_EmpSales(self, connection):
         self.empSales_Window = windowEmpSales(connection)
+        self.empSales_Window.switch_back.connect(lambda: self.show_HrWindow(connection))
         self.hr_Window.close()
         self.empSales_Window.show()
         self.empSales_Window.setFixedSize(1080,720)  
