@@ -216,7 +216,7 @@ class engrWindow (QtWidgets.QWidget):
         self.switch_engrView.emit(connection)  
       
 class windowUpdateInv(QtWidgets.QWidget):
-    
+    switch_back = QtCore.pyqtSignal(psycopg2.extensions.connection)
     def __init__(self, connection):
         QtWidgets.QWidget.__init__(self)
         self.changes = ''
@@ -233,11 +233,17 @@ class windowUpdateInv(QtWidgets.QWidget):
 
         self.buttonUpdate = QtWidgets.QPushButton('Update')
         self.buttonUpdate.clicked.connect(lambda: self.btn_Update(connection))
+        self.backbtn = QtWidgets.QPushButton('Back')
+        self.backbtn.clicked.connect(lambda: self.btn_back(connection))
         
         layout.addWidget(self.button)
         layout.addWidget(self.tableView)
         layout.addWidget(self.buttonUpdate)
+        layout.addWidget(self.backbtn)
         self.setLayout(layout)
+    
+    def btn_back(self, connection):
+        self.switch_back.emit(connection)  
         
     def btn_clk(self, connection):
         df=pd.DataFrame()
@@ -307,7 +313,7 @@ class windowUpdateInv(QtWidgets.QWidget):
                     pass      
 
 class windowUpdateModel(QtWidgets.QWidget):
-    
+    switch_back = QtCore.pyqtSignal(psycopg2.extensions.connection)
     def __init__(self, connection):
         QtWidgets.QWidget.__init__(self)
         self.changes = ''
@@ -325,10 +331,17 @@ class windowUpdateModel(QtWidgets.QWidget):
         self.buttonUpdate = QtWidgets.QPushButton('Update')
         self.buttonUpdate.clicked.connect(lambda: self.btn_Update(connection))
         
+        self.backbtn = QtWidgets.QPushButton('Back')
+        self.backbtn.clicked.connect(lambda: self.btn_back(connection))
+        
         layout.addWidget(self.button)
         layout.addWidget(self.tableView)
         layout.addWidget(self.buttonUpdate)
+        layout.addWidget(self.backbtn)
         self.setLayout(layout)
+    
+    def btn_back(self, connection):
+        self.switch_back.emit(connection)   
         
     def btn_clk(self, connection):
         df=pd.DataFrame()
@@ -380,7 +393,7 @@ class windowUpdateModel(QtWidgets.QWidget):
                     pass      
 
 class windowEngrView(QtWidgets.QWidget):
-
+    switch_back = QtCore.pyqtSignal(psycopg2.extensions.connection)
     def __init__(self, connection):
         QtWidgets.QWidget.__init__(self)
         self.setWindowTitle('Employee (Engineer View)')
@@ -391,9 +404,16 @@ class windowEngrView(QtWidgets.QWidget):
         self.button = QtWidgets.QPushButton('Display')
         self.button.clicked.connect(lambda: self.btn_clk(connection))
 
+        self.backbtn = QtWidgets.QPushButton('Back')
+        self.backbtn.clicked.connect(lambda: self.btn_back(connection))
+        
         layout.addWidget(self.button)
         layout.addWidget(self.tableView)
+        layout.addWidget(self.backbtn)
         self.setLayout(layout)
+     
+    def btn_back(self, connection):
+        self.switch_back.emit(connection)    
         
     def btn_clk(self,connection):
         df=""
@@ -449,7 +469,7 @@ class saleWindow (QtWidgets.QWidget):
         self.switch_salesReport.emit(connection)      
         
 class windowviewUpdateCus(QtWidgets.QWidget):
-    
+    switch_back = QtCore.pyqtSignal(psycopg2.extensions.connection)
     def __init__(self, connection):
         QtWidgets.QWidget.__init__(self)
         self.changes = ''
@@ -467,10 +487,17 @@ class windowviewUpdateCus(QtWidgets.QWidget):
         self.buttonUpdate = QtWidgets.QPushButton('Update')
         self.buttonUpdate.clicked.connect(lambda: self.btn_Update(connection))
         
+        self.backbtn = QtWidgets.QPushButton('Back')
+        self.backbtn.clicked.connect(lambda: self.btn_back(connection))
+        
         layout.addWidget(self.button)
         layout.addWidget(self.tableView)
         layout.addWidget(self.buttonUpdate)
+        layout.addWidget(self.backbtn)
         self.setLayout(layout)
+    
+    def btn_back(self, connection):
+        self.switch_back.emit(connection)    
         
     def btn_clk(self, connection):
         df=pd.DataFrame()
@@ -528,6 +555,7 @@ class windowviewUpdateCus(QtWidgets.QWidget):
                     pass
                 
 class windowcr8Order(QtWidgets.QWidget):
+    switch_back = QtCore.pyqtSignal(psycopg2.extensions.connection)
     def __init__(self, connection):
         QtWidgets.QWidget.__init__(self)
         self.setWindowTitle('Orders')
@@ -560,6 +588,9 @@ class windowcr8Order(QtWidgets.QWidget):
         hBox4.addWidget(QtWidgets.QLabel("modelNumber (integer only)"))
         hBox4.addWidget(self.modelNumber)
         
+        self.backbtn = QtWidgets.QPushButton('Back')
+        self.backbtn.clicked.connect(lambda: self.btn_back(connection))
+        
         vBox.addLayout(hBox1)
         vBox.addLayout(hBox2)
         vBox.addLayout(hBox3)
@@ -571,7 +602,11 @@ class windowcr8Order(QtWidgets.QWidget):
                                                        self.quantity.text(), 
                                                        self.modelNumber.text()))
         vBox.addWidget(self.button)
+        vBox.addWidget(self.backbtn)
         self.setLayout(vBox)
+             
+    def btn_back(self, connection):
+        self.switch_back.emit(connection)      
         
     def btn_clk(self, connection, orderNumber, billCost, quantity, modelNumber):
         try:   
@@ -590,6 +625,7 @@ class windowcr8Order(QtWidgets.QWidget):
                     pass
         
 class windowSalesReport(QtWidgets.QWidget):
+    switch_back = QtCore.pyqtSignal(psycopg2.extensions.connection)
 
     def __init__(self, connection):
         QtWidgets.QWidget.__init__(self)
@@ -601,9 +637,16 @@ class windowSalesReport(QtWidgets.QWidget):
         self.button = QtWidgets.QPushButton('Display')
         self.button.clicked.connect(lambda: self.btn_clk(connection))
 
+        self.backbtn = QtWidgets.QPushButton('Back')
+        self.backbtn.clicked.connect(lambda: self.btn_back(connection))
+        
         layout.addWidget(self.button)
         layout.addWidget(self.tableView)
+        layout.addWidget(self.backbtn)
         self.setLayout(layout)
+        
+    def btn_back(self, connection):
+        self.switch_back.emit(connection)      
         
     def btn_clk(self,connection):
         df=""
@@ -680,6 +723,8 @@ class AdminWindow(QtWidgets.QWidget):
         self.switch_setupTable.emit(connection)
         
 class windowcr8Emp(QtWidgets.QWidget):
+    switch_back = QtCore.pyqtSignal(psycopg2.extensions.connection)
+    
     def __init__(self, connection):
         QtWidgets.QWidget.__init__(self)
         self.setWindowTitle('Create Employee')
@@ -732,6 +777,9 @@ class windowcr8Emp(QtWidgets.QWidget):
         hBox9.addWidget(QtWidgets.QLabel("bonus"))
         hBox9.addWidget(self.bonus)
         
+        self.backbtn = QtWidgets.QPushButton('Back')
+        self.backbtn.clicked.connect(lambda: self.btn_back(connection))
+        
         vBox.addLayout(hBox1)
         vBox.addLayout(hBox2)
         vBox.addLayout(hBox3)
@@ -754,7 +802,11 @@ class windowcr8Emp(QtWidgets.QWidget):
                                                        self.bonus.text(),
                                                        ))
         vBox.addWidget(self.button)
+        vBox.addWidget(self.backbtn)
         self.setLayout(vBox)
+        
+    def btn_back(self, connection):
+        self.switch_back.emit(connection)      
         
     def btn_clk(self, connection, employeeID, fname, lname, ssn, salary, payType, jobType, userID, bonus):
         try:   
@@ -775,6 +827,7 @@ class windowcr8Emp(QtWidgets.QWidget):
                     
     
 class windowSetupTable(QtWidgets.QWidget):
+    switch_back = QtCore.pyqtSignal(psycopg2.extensions.connection)
     def __init__(self, connection):
         QtWidgets.QWidget.__init__(self)
         self.setWindowTitle('Table')
@@ -792,6 +845,9 @@ class windowSetupTable(QtWidgets.QWidget):
         hBox2.addWidget(QtWidgets.QLabel("column and datatype"))
         hBox2.addWidget(self.columns)
         
+        self.backbtn = QtWidgets.QPushButton('Back')
+        self.backbtn.clicked.connect(lambda: self.btn_back(connection))
+        
         vBox.addLayout(hBox1)
         vBox.addLayout(hBox2)
 
@@ -800,7 +856,11 @@ class windowSetupTable(QtWidgets.QWidget):
                                                        self.tableName.text(), 
                                                        self.columns.text()))
         vBox.addWidget(self.button)
+        vBox.addWidget(self.backbtn)
         self.setLayout(vBox)
+
+    def btn_back(self, connection):
+        self.switch_back.emit(connection)   
         
     def btn_clk(self, connection, tableName, columns):
         try:   
@@ -820,6 +880,7 @@ class windowSetupTable(QtWidgets.QWidget):
 
     
 class windowGrantView(QtWidgets.QWidget):
+    switch_back = QtCore.pyqtSignal(psycopg2.extensions.connection)
     def __init__(self, connection):
         QtWidgets.QWidget.__init__(self)
         self.setWindowTitle('Grant Access')
@@ -836,6 +897,9 @@ class windowGrantView(QtWidgets.QWidget):
         self.roleName = QtWidgets.QLineEdit("hr")
         hBox2.addWidget(QtWidgets.QLabel("Role/ User"))
         hBox2.addWidget(self.roleName)
+
+        self.backbtn = QtWidgets.QPushButton('Back')
+        self.backbtn.clicked.connect(lambda: self.btn_back(connection))
         
         vBox.addLayout(hBox1)
         vBox.addLayout(hBox2)
@@ -845,7 +909,10 @@ class windowGrantView(QtWidgets.QWidget):
                                                        self.viewName.text(), 
                                                        self.roleName.text()))
         vBox.addWidget(self.button)
+        vBox.addWidget(self.backbtn)
         self.setLayout(vBox)
+    def btn_back(self, connection):
+        self.switch_back.emit(connection)      
         
     def btn_clk(self, connection, viewName, roleName):
         try:   
@@ -863,6 +930,7 @@ class windowGrantView(QtWidgets.QWidget):
                     print("Access granted")       
     
 class windowAdminView(QtWidgets.QWidget):
+    switch_back = QtCore.pyqtSignal(psycopg2.extensions.connection)
     def __init__(self, connection, view_sql):
         QtWidgets.QWidget.__init__(self)
         if(view_sql == "employee_expense"):
@@ -875,14 +943,21 @@ class windowAdminView(QtWidgets.QWidget):
         
         self.button = QtWidgets.QPushButton('Display')
         self.button.clicked.connect(lambda: self.btn_clk(connection, view_sql))
-
+        
+        self.backbtn = QtWidgets.QPushButton('Back')
+        self.backbtn.clicked.connect(lambda: self.btn_back(connection))
+        
         layout.addWidget(self.button)
         layout.addWidget(self.tableView)
         if(view_sql == "employee_expense"):
             self.tableView2 = QtWidgets.QTableView(self)
             layout.addWidget(self.tableView2)
+        layout.addWidget(self.backbtn)
         self.setLayout(layout)
-        
+
+    def btn_back(self, connection):
+        self.switch_back.emit(connection)      
+                
     def btn_clk(self,connection, view_sql):
         df=""
         try:         
@@ -1007,7 +1082,17 @@ class Controller:
     def __init__(self):
         self.updateEmp_Window = None
         self.empSales_Window = None
-
+        self.viewUpdateCus_Window = None
+        self.cr8Order_Window = None
+        self.salesReport_Window = None
+        self.cr8Emp_Window = None
+        self.setupTable_Window = None
+        self.grantView_Window = None
+        self.adminView_Window = None
+        self.updateInv_Window = None
+        self.updateModel_Window = None
+        self.engrView_Window = None
+       
     def show_login(self):
         self.login = Login()
         self.login.switch_SaleWindow.connect(self.show_SaleWindow)
@@ -1022,23 +1107,32 @@ class Controller:
         self.sale_Window.switch_viewUpdateCus.connect(lambda: self.show_window_viewUpdateCus(connection))
         self.sale_Window.switch_cr8Order.connect(lambda: self.show_window_cr8Order(connection))
         self.login.close()
+        if self.viewUpdateCus_Window is not None:
+            self.viewUpdateCus_Window.close()
+        if self.cr8Order_Window is not None:
+            self.cr8Order_Window.close()
+        if self.salesReport_Window is not None:
+            self.salesReport_Window.close()    
         self.sale_Window.show()
         self.sale_Window.setFixedSize(1080,720)
     
     def show_window_viewUpdateCus(self, connection):
         self.viewUpdateCus_Window = windowviewUpdateCus(connection)
+        self.viewUpdateCus_Window.switch_back.connect(lambda: self.show_SaleWindow(connection))
         self.sale_Window.close()
         self.viewUpdateCus_Window.show()
         self.viewUpdateCus_Window.setFixedSize(1080,720)
     
     def show_window_cr8Order(self, connection):
         self.cr8Order_Window = windowcr8Order(connection)
+        self.cr8Order_Window.switch_back.connect(lambda: self.show_SaleWindow(connection))
         self.sale_Window.close()
         self.cr8Order_Window.show()
         self.cr8Order_Window.setFixedSize(1080,720)
         
     def show_window_salesReport(self, connection):
         self.salesReport_Window = windowSalesReport(connection)
+        self.salesReport_Window.switch_back.connect(lambda: self.show_SaleWindow(connection))
         self.sale_Window.close()
         self.salesReport_Window.show()
         self.salesReport_Window.setFixedSize(1080,720)
@@ -1050,29 +1144,41 @@ class Controller:
         self.admin_Window.switch_grantView.connect(lambda: self.show_window_grantView(connection))
         self.admin_Window.switch_setupTable.connect(lambda: self.show_window_setupTable(connection))
         self.login.close()
+        if self.cr8Emp_Window is not None:
+            self.cr8Emp_Window.close()
+        if self.setupTable_Window is not None:
+            self.setupTable_Window.close()
+        if self.grantView_Window is not None:
+            self.grantView_Window.close()  
+        if self.adminView_Window is not None:
+            self.adminView_Window.close()      
         self.admin_Window.show()
         self.admin_Window.setFixedSize(1080,720)
 
     def show_window_cr8Emp(self, connection):
         self.cr8Emp_Window = windowcr8Emp(connection)
+        self.cr8Emp_Window.switch_back.connect(lambda: self.show_AdminWindow(connection))
         self.admin_Window.close()
         self.cr8Emp_Window.show()
         self.cr8Emp_Window.setFixedSize(1080,720)
     
     def show_window_setupTable(self, connection):
         self.setupTable_Window = windowSetupTable(connection)
+        self.setupTable_Window.switch_back.connect(lambda: self.show_AdminWindow(connection))
         self.admin_Window.close()
         self.setupTable_Window.show()
         self.setupTable_Window.setFixedSize(1080,720)
     
     def show_window_grantView(self, connection):
         self.grantView_Window = windowGrantView(connection)
+        self.grantView_Window.switch_back.connect(lambda: self.show_AdminWindow(connection))
         self.admin_Window.close()
         self.grantView_Window.show()
         self.grantView_Window.setFixedSize(1080,720)
         
     def show_window_adminView(self, connection, view_sql):
         self.adminView_Window = windowAdminView(connection, view_sql)
+        self.adminView_Window.switch_back.connect(lambda: self.show_AdminWindow(connection))
         self.admin_Window.close()
         self.adminView_Window.show()
         self.adminView_Window.setFixedSize(1080,720)  
@@ -1083,23 +1189,32 @@ class Controller:
         self.engr_Window.switch_updateModel.connect(lambda: self.show_window_updateModel(connection))
         self.engr_Window.switch_engrView.connect(lambda: self.show_window_engrView(connection))
         self.login.close()
+        if self.updateInv_Window is not None:
+            self.updateInv_Window.close()
+        if self.updateModel_Window is not None:
+            self.updateModel_Window.close()
+        if self.engrView_Window is not None:
+            self.engrView_Window.close()    
         self.engr_Window.show()
         self.engr_Window.setFixedSize(1080,720)
        
     def show_window_updateInv(self, connection):
         self.updateInv_Window = windowUpdateInv(connection)
+        self.updateInv_Window.switch_back.connect(lambda: self.show_EngrWindow(connection))
         self.engr_Window.close()
         self.updateInv_Window.show()
         self.updateInv_Window.setFixedSize(1080,720)  
      
     def show_window_updateModel(self, connection):
         self.updateModel_Window = windowUpdateModel(connection)
+        self.updateModel_Window.switch_back.connect(lambda: self.show_EngrWindow(connection))
         self.engr_Window.close()
         self.updateModel_Window.show()
         self.updateModel_Window.setFixedSize(1080,720)  
     
     def show_window_engrView(self, connection):
         self.engrView_Window = windowEngrView(connection)
+        self.engrView_Window.switch_back.connect(lambda: self.show_EngrWindow(connection))
         self.engr_Window.close()
         self.engrView_Window.show()
         self.engrView_Window.setFixedSize(1080,720)  
