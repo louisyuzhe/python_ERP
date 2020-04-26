@@ -1,3 +1,10 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Sat Apr 18 19:08:52 2020
+
+@author: Yuzhe Lim
+"""
+
 import sys
 from PyQt5 import QtCore, QtWidgets
 import psycopg2
@@ -1306,5 +1313,4 @@ def main():
     sys.exit(app.exec_())
 
 
-if __name__ == '__main__':
-    main()
+main()

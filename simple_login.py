@@ -39,3 +39,7 @@ def main_GUI():
     
 
 main_GUI()
+
+"""
+python pyinstaller.py --noconsole --onefile yourscript.py
+"""
