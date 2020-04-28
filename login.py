@@ -247,7 +247,7 @@ class windowInsertModInv(QtWidgets.QWidget):
         vBox.setSpacing(-20) 
         
         self.rName = QtWidgets.QLineEdit("model")
-        hBox1.addWidget(QtWidgets.QLabel("Relation anme (model/inventory"))
+        hBox1.addWidget(QtWidgets.QLabel("Relation name (model/inventory"))
         hBox1.addWidget(self.rName)
         
         self.tuple1 = QtWidgets.QLineEdit("1234, 30")
@@ -791,6 +791,7 @@ class AdminWindow(QtWidgets.QWidget):
     switch_cr8Emp = QtCore.pyqtSignal(psycopg2.extensions.connection)
     switch_setupTable = QtCore.pyqtSignal(psycopg2.extensions.connection)
     switch_grantView = QtCore.pyqtSignal(psycopg2.extensions.connection)
+    switch_insertAny = QtCore.pyqtSignal(psycopg2.extensions.connection)
     
     def __init__(self, connection):
         QtWidgets.QWidget.__init__(self)
@@ -799,6 +800,10 @@ class AdminWindow(QtWidgets.QWidget):
         self.cr8Employee_btn = QtWidgets.QPushButton('Create a new employee')
         self.cr8Employee_btn.clicked.connect(lambda: self.switch_cr8Emp_btn(connection))
         vBox.addWidget(self.cr8Employee_btn)
+        
+        self.insertAny_btn = QtWidgets.QPushButton('add tuple to any table')
+        self.insertAny_btn.clicked.connect(lambda: self.switch_insertAny_func(connection))
+        vBox.addWidget(self.insertAny_btn)
         
         self.setupTable_btn = QtWidgets.QPushButton('Set up table')
         self.setupTable_btn.clicked.connect(lambda: self.switch_setuptable_btn(connection))
@@ -837,6 +842,60 @@ class AdminWindow(QtWidgets.QWidget):
         
     def switch_setuptable_btn(self, connection):
         self.switch_setupTable.emit(connection)
+        
+    def switch_insertAny_func(self, connection):
+        self.switch_insertAny.emit(connection)
+        
+class windowInsertAny(QtWidgets.QWidget):
+    switch_back = QtCore.pyqtSignal(psycopg2.extensions.connection)
+    def __init__(self, connection):
+        QtWidgets.QWidget.__init__(self)
+        self.setWindowTitle('Add new tuple in table')
+
+        vBox = QtWidgets.QVBoxLayout()
+        hBox1 = QtWidgets.QHBoxLayout()
+        hBox2 = QtWidgets.QHBoxLayout()
+        vBox.setSpacing(-20) 
+        
+        self.rName = QtWidgets.QLineEdit("orders")
+        hBox1.addWidget(QtWidgets.QLabel("Relation name"))
+        hBox1.addWidget(self.rName)
+        
+        self.tuple1 = QtWidgets.QLineEdit("1234,30,12,3314")
+        hBox2.addWidget(QtWidgets.QLabel("Tuple"))
+        hBox2.addWidget(self.tuple1)
+
+        self.backbtn = QtWidgets.QPushButton('Back')
+        self.backbtn.clicked.connect(lambda: self.btn_back(connection))
+        
+        vBox.addLayout(hBox1)
+        vBox.addLayout(hBox2)
+
+        self.button = QtWidgets.QPushButton('Add tuple')
+        self.button.clicked.connect(lambda: self.btn_clk(connection,
+                                                       self.rName.text(), 
+                                                       self.tuple1.text()))
+        vBox.addWidget(self.button)
+        vBox.addWidget(self.backbtn)
+        self.setLayout(vBox)
+    def btn_back(self, connection):
+        self.switch_back.emit(connection)      
+        
+    def btn_clk(self, connection, rName, tuple1):
+        try:   
+            cursor = connection.cursor()
+            login_sql = "INSERT INTO "+rName+" VALUES ("+ tuple1+");"
+   
+            cursor.execute(login_sql) #table and columns
+            connection.commit()    
+        except (Exception, psycopg2.Error) as error :
+            print ("Insert tuple failed,", error)           
+   
+        finally:
+            #closing database connection.
+                if(connection):
+                    print("Tuple added")          
+
         
 class windowcr8Emp(QtWidgets.QWidget):
     switch_back = QtCore.pyqtSignal(psycopg2.extensions.connection)
@@ -1273,6 +1332,7 @@ class Controller:
         self.admin_Window.switch_cr8Emp.connect(lambda: self.show_window_cr8Emp(connection))
         self.admin_Window.switch_grantView.connect(lambda: self.show_window_grantView(connection))
         self.admin_Window.switch_setupTable.connect(lambda: self.show_window_setupTable(connection))
+        self.admin_Window.switch_insertAny.connect(lambda: self.show_window_insertAny(connection))
         self.login.close()
         if self.cr8Emp_Window is not None:
             self.cr8Emp_Window.close()
@@ -1285,6 +1345,14 @@ class Controller:
         self.admin_Window.show()
         self.admin_Window.setFixedSize(1080,720)
 
+    def show_window_insertAny(self, connection):
+        self.insertAny_Window = windowInsertAny(connection)      
+        self.insertAny_Window.switch_back.connect(lambda: self.show_AdminWindow(connection))        
+        if self.admin_Window is not None:        
+            self.admin_Window.close()  
+        self.insertAny_Window.show()
+        self.insertAny_Window.setFixedSize(1080,720)
+        
     def show_window_cr8Emp(self, connection):
         self.cr8Emp_Window = windowcr8Emp(connection)      
         if self.admin_Window is not None:
