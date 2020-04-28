@@ -792,6 +792,8 @@ class AdminWindow(QtWidgets.QWidget):
     switch_setupTable = QtCore.pyqtSignal(psycopg2.extensions.connection)
     switch_grantView = QtCore.pyqtSignal(psycopg2.extensions.connection)
     switch_insertAny = QtCore.pyqtSignal(psycopg2.extensions.connection)
+    switch_viewAny = QtCore.pyqtSignal(psycopg2.extensions.connection)
+    switch_customSQL = QtCore.pyqtSignal(psycopg2.extensions.connection)
     
     def __init__(self, connection):
         QtWidgets.QWidget.__init__(self)
@@ -801,9 +803,13 @@ class AdminWindow(QtWidgets.QWidget):
         self.cr8Employee_btn.clicked.connect(lambda: self.switch_cr8Emp_btn(connection))
         vBox.addWidget(self.cr8Employee_btn)
         
-        self.insertAny_btn = QtWidgets.QPushButton('add tuple to any table')
+        self.insertAny_btn = QtWidgets.QPushButton('Add tuple to any table')
         self.insertAny_btn.clicked.connect(lambda: self.switch_insertAny_func(connection))
         vBox.addWidget(self.insertAny_btn)
+        
+        self.viewAny_btn = QtWidgets.QPushButton('View any table/view')
+        self.viewAny_btn.clicked.connect(lambda: self.switch_viewAny_func(connection))
+        vBox.addWidget(self.viewAny_btn)
         
         self.setupTable_btn = QtWidgets.QPushButton('Set up table')
         self.setupTable_btn.clicked.connect(lambda: self.switch_setuptable_btn(connection))
@@ -812,6 +818,10 @@ class AdminWindow(QtWidgets.QWidget):
         self.grantAccess_btn = QtWidgets.QPushButton('Grant Access')
         self.grantAccess_btn.clicked.connect(lambda: self.switch_grantAccess_btn(connection))
         vBox.addWidget(self.grantAccess_btn)
+        
+        self.switch_customSQL_btn = QtWidgets.QPushButton('Custom Query')
+        self.switch_customSQL_btn.clicked.connect(lambda: self.switch_customSQL_func(connection))
+        vBox.addWidget(self.switch_customSQL_btn)
         
         self.btn1 = QtWidgets.QPushButton('Employee and model expense')
         self.btn1.clicked.connect(lambda: self.switch_view(connection, "employee_expense"))
@@ -845,7 +855,104 @@ class AdminWindow(QtWidgets.QWidget):
         
     def switch_insertAny_func(self, connection):
         self.switch_insertAny.emit(connection)
+    
+    def switch_viewAny_func(self, connection):
+        self.switch_viewAny.emit(connection)
         
+    def switch_customSQL_func(self, connection):
+        self.switch_customSQL.emit(connection)
+        
+class windowCustomSQL(QtWidgets.QWidget):
+    switch_back = QtCore.pyqtSignal(psycopg2.extensions.connection)
+    def __init__(self, connection):
+        QtWidgets.QWidget.__init__(self)
+        self.setWindowTitle('Custom SQL')
+
+        vBox = QtWidgets.QVBoxLayout()
+        hBox1 = QtWidgets.QHBoxLayout()
+        hBox2 = QtWidgets.QHBoxLayout()
+        vBox.setSpacing(-20) 
+        
+        self.query1 = QtWidgets.QLineEdit("""CREATE VIEW test_view1 AS SELECT "orderNumber", "billCost" FROM orders;""")
+        
+        hBox1.addWidget(QtWidgets.QLabel("Query"))
+        hBox1.addWidget(self.query1)
+
+        self.backbtn = QtWidgets.QPushButton('Back')
+        self.backbtn.clicked.connect(lambda: self.btn_back(connection))
+        
+        vBox.addLayout(hBox1)
+        vBox.addLayout(hBox2)
+
+        self.button = QtWidgets.QPushButton('Execute query')
+        self.button.clicked.connect(lambda: self.btn_clk(connection,
+                                                       self.query1.text()))
+        vBox.addWidget(self.button)
+        vBox.addWidget(self.backbtn)
+        self.setLayout(vBox)
+    def btn_back(self, connection):
+        self.switch_back.emit(connection)      
+        
+    def btn_clk(self, connection, query1):
+        try:   
+            cursor = connection.cursor()
+   
+            cursor.execute(query1) #table and columns
+            connection.commit()    
+        except (Exception, psycopg2.Error) as error :
+            print ("Query execution failed,", error)           
+   
+        finally:
+            #closing database connection.
+                if(connection):
+                    print("Query executed successfully")  
+                    
+class windowViewAny(QtWidgets.QWidget):
+    switch_back = QtCore.pyqtSignal(psycopg2.extensions.connection)
+    def __init__(self, connection):
+        QtWidgets.QWidget.__init__(self)
+
+        self.setWindowTitle("Table/View")
+        layout = QtWidgets.QGridLayout()
+        
+        self.tName = QtWidgets.QLineEdit("customer")
+        layout.addWidget(QtWidgets.QLabel("Table/view name"))
+        layout.addWidget(self.tName)
+        
+        self.tableView = QtWidgets.QTableView(self)
+        
+        self.button = QtWidgets.QPushButton('Display')
+        self.button.clicked.connect(lambda: self.btn_clk(connection, self.tName.text()))
+        
+        self.backbtn = QtWidgets.QPushButton('Back')
+        self.backbtn.clicked.connect(lambda: self.btn_back(connection))
+        
+        layout.addWidget(self.button)
+        layout.addWidget(self.tableView)
+        layout.addWidget(self.backbtn)
+        self.setLayout(layout)
+
+    def btn_back(self, connection):
+        self.switch_back.emit(connection)      
+                
+    def btn_clk(self,connection, tName):
+        df=""
+        try:         
+            query2 = "select * from "+tName+";"
+            print(query2)
+            df = pd.read_sql(query2, connection)                                        
+            
+            print(tName+ " retrieved successfully in PostgreSQL")
+            #print(df)
+        except (Exception, psycopg2.Error) as error :
+            print ("Error while connecting to PostgreSQL", error)
+        finally:
+            #closing database connection.
+                if(connection):      
+                    pass
+        model = DataFrameModel(df)
+        self.tableView.setModel(model)
+            
 class windowInsertAny(QtWidgets.QWidget):
     switch_back = QtCore.pyqtSignal(psycopg2.extensions.connection)
     def __init__(self, connection):
@@ -1271,6 +1378,9 @@ class Controller:
         self.hr_Window = None
         self.view_Order = None
         self.insertModInvWindow = None
+        self.viewAny_Window = None
+        self.insertAny_Window = None 
+        self.customSQL_Window = None
         
     def show_login(self):
         self.login = Login()
@@ -1333,6 +1443,8 @@ class Controller:
         self.admin_Window.switch_grantView.connect(lambda: self.show_window_grantView(connection))
         self.admin_Window.switch_setupTable.connect(lambda: self.show_window_setupTable(connection))
         self.admin_Window.switch_insertAny.connect(lambda: self.show_window_insertAny(connection))
+        self.admin_Window.switch_viewAny.connect(lambda: self.show_window_viewAny(connection))
+        self.admin_Window.switch_customSQL.connect(lambda: self.show_window_customSQL(connection))
         self.login.close()
         if self.cr8Emp_Window is not None:
             self.cr8Emp_Window.close()
@@ -1341,10 +1453,32 @@ class Controller:
         if self.grantView_Window is not None:
             self.grantView_Window.close()  
         if self.adminView_Window is not None:
-            self.adminView_Window.close()      
+            self.adminView_Window.close()   
+        if self.insertAny_Window is not None:
+            self.insertAny_Window.close()  
+        if self.viewAny_Window is not None:
+            self.viewAny_Window.close() 
+        if self.customSQL_Window is not None:
+            self.customSQL_Window.close() 
         self.admin_Window.show()
         self.admin_Window.setFixedSize(1080,720)
 
+    def show_window_customSQL(self, connection):
+        self.customSQL_Window = windowCustomSQL(connection)      
+        self.customSQL_Window.switch_back.connect(lambda: self.show_AdminWindow(connection))        
+        if self.admin_Window is not None:        
+            self.admin_Window.close()  
+        self.customSQL_Window.show()
+        self.customSQL_Window.setFixedSize(1080,720)
+        
+    def show_window_viewAny(self, connection):
+        self.viewAny_Window = windowViewAny(connection)      
+        self.viewAny_Window.switch_back.connect(lambda: self.show_AdminWindow(connection))        
+        if self.admin_Window is not None:        
+            self.admin_Window.close()  
+        self.viewAny_Window.show()
+        self.viewAny_Window.setFixedSize(1080,720)
+        
     def show_window_insertAny(self, connection):
         self.insertAny_Window = windowInsertAny(connection)      
         self.insertAny_Window.switch_back.connect(lambda: self.show_AdminWindow(connection))        
