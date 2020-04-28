@@ -9,9 +9,11 @@ import sys
 from PyQt5 import QtCore, QtWidgets
 import psycopg2
 import pandas as pd
+import numpy
 
 class hrWindow (QtWidgets.QWidget):
 
+    switch_cr8Emp = QtCore.pyqtSignal(psycopg2.extensions.connection)
     switch_updateEmp = QtCore.pyqtSignal(psycopg2.extensions.connection)
     switch_EmpSales = QtCore.pyqtSignal(psycopg2.extensions.connection)
     
@@ -27,13 +29,18 @@ class hrWindow (QtWidgets.QWidget):
         self.button2.clicked.connect(lambda: self.switch2(connection))
         vBox.addWidget(self.button2)
         
+        self.cr8Employee_btn = QtWidgets.QPushButton('Create a new employee')
+        self.cr8Employee_btn.clicked.connect(lambda: self.switch_cr8Emp_btn(connection))
+        vBox.addWidget(self.cr8Employee_btn)
+        
         self.setLayout(vBox)
     
     def switch1(self, connection):
         self.switch_updateEmp.emit(connection)        
     def switch2(self, connection):
         self.switch_EmpSales.emit(connection)      
-
+    def switch_cr8Emp_btn(self, connection):
+        self.switch_cr8Emp.emit(connection)
   
 class windowUpdateEmp(QtWidgets.QWidget):
     switch_back = QtCore.pyqtSignal(psycopg2.extensions.connection)
@@ -189,7 +196,6 @@ class windowEmpSales(QtWidgets.QWidget):
                     pass
         model = DataFrameModel(df)
         self.tableView.setModel(model)
-
 
 class engrWindow (QtWidgets.QWidget):
 
@@ -449,6 +455,7 @@ class saleWindow (QtWidgets.QWidget):
     switch_viewUpdateCus = QtCore.pyqtSignal(psycopg2.extensions.connection)
     switch_cr8Order = QtCore.pyqtSignal(psycopg2.extensions.connection)
     switch_salesReport = QtCore.pyqtSignal(psycopg2.extensions.connection)  
+    switch_viewOrder = QtCore.pyqtSignal(psycopg2.extensions.connection) 
     
     def __init__(self, connection):
         QtWidgets.QWidget.__init__(self)
@@ -466,6 +473,10 @@ class saleWindow (QtWidgets.QWidget):
         self.button3.clicked.connect(lambda: self.switch3(connection))
         vBox.addWidget(self.button3)
         
+        self.button4 = QtWidgets.QPushButton('View Order')
+        self.button4.clicked.connect(lambda: self.switch4(connection))
+        vBox.addWidget(self.button4)
+        
         self.setLayout(vBox)
             
     def switch1(self, connection):
@@ -474,7 +485,48 @@ class saleWindow (QtWidgets.QWidget):
         self.switch_cr8Order.emit(connection)
     def switch3(self, connection):
         self.switch_salesReport.emit(connection)      
+    def switch4(self, connection):
+        self.switch_viewOrder.emit(connection) 
         
+class windowViewOrder(QtWidgets.QWidget):
+    switch_back = QtCore.pyqtSignal(psycopg2.extensions.connection)
+    def __init__(self, connection):
+        QtWidgets.QWidget.__init__(self)
+        self.setWindowTitle('Order')
+        layout = QtWidgets.QGridLayout()
+        self.tableView = QtWidgets.QTableView(self)
+
+
+        self.button = QtWidgets.QPushButton('Display')
+        self.button.clicked.connect(lambda: self.btn_clk(connection))
+        self.backbtn = QtWidgets.QPushButton('Back')
+        self.backbtn.clicked.connect(lambda: self.btn_back(connection))
+        layout.addWidget(self.button)
+        layout.addWidget(self.tableView)
+        layout.addWidget(self.backbtn)
+        self.setLayout(layout)
+    
+    def btn_back(self, connection):
+        self.switch_back.emit(connection)      
+        
+    def btn_clk(self,connection):
+        df=""
+        try:         
+            query2 = "select * from orders;"
+            
+            df = pd.read_sql(query2, connection)                                        
+            
+            print("orders table retrieved successfully in PostgreSQL ")
+            #print(df)
+        except (Exception, psycopg2.Error) as error :
+            print ("Error while connecting to PostgreSQL", error)
+        finally:
+            #closing database connection.
+                if(connection):      
+                    pass
+        model = DataFrameModel(df)
+        self.tableView.setModel(model)
+                
 class windowviewUpdateCus(QtWidgets.QWidget):
     switch_back = QtCore.pyqtSignal(psycopg2.extensions.connection)
     def __init__(self, connection):
@@ -796,7 +848,7 @@ class windowcr8Emp(QtWidgets.QWidget):
         vBox.addLayout(hBox7)
         vBox.addLayout(hBox8)
         vBox.addLayout(hBox9)
-        self.button = QtWidgets.QPushButton('Create new order')
+        self.button = QtWidgets.QPushButton('Create new employee')
         self.button.clicked.connect(lambda: self.btn_clk( connection,
                                                        self.employeeID.text(), 
                                                        self.fname.text(),
@@ -1099,7 +1151,10 @@ class Controller:
         self.updateInv_Window = None
         self.updateModel_Window = None
         self.engrView_Window = None
-       
+        self.admin_Window = None
+        self.hr_Window = None
+        self.view_Order = None
+        
     def show_login(self):
         self.login = Login()
         self.login.switch_SaleWindow.connect(self.show_SaleWindow)
@@ -1113,6 +1168,7 @@ class Controller:
         self.sale_Window.switch_salesReport.connect(lambda: self.show_window_salesReport(connection))
         self.sale_Window.switch_viewUpdateCus.connect(lambda: self.show_window_viewUpdateCus(connection))
         self.sale_Window.switch_cr8Order.connect(lambda: self.show_window_cr8Order(connection))
+        self.sale_Window.switch_viewOrder.connect(lambda: self.show_window_viewOrder(connection))
         self.login.close()
         if self.viewUpdateCus_Window is not None:
             self.viewUpdateCus_Window.close()
@@ -1120,9 +1176,18 @@ class Controller:
             self.cr8Order_Window.close()
         if self.salesReport_Window is not None:
             self.salesReport_Window.close()    
+        if self.view_Order is not None:
+            self.view_Order.close()
         self.sale_Window.show()
         self.sale_Window.setFixedSize(1080,720)
     
+    def show_window_viewOrder(self, connection):
+        self.view_Order = windowViewOrder(connection)
+        self.view_Order.switch_back.connect(lambda: self.show_SaleWindow(connection))
+        self.sale_Window.close()
+        self.view_Order.show()
+        self.view_Order.setFixedSize(1080,720)  
+        
     def show_window_viewUpdateCus(self, connection):
         self.viewUpdateCus_Window = windowviewUpdateCus(connection)
         self.viewUpdateCus_Window.switch_back.connect(lambda: self.show_SaleWindow(connection))
@@ -1163,9 +1228,13 @@ class Controller:
         self.admin_Window.setFixedSize(1080,720)
 
     def show_window_cr8Emp(self, connection):
-        self.cr8Emp_Window = windowcr8Emp(connection)
-        self.cr8Emp_Window.switch_back.connect(lambda: self.show_AdminWindow(connection))
-        self.admin_Window.close()
+        self.cr8Emp_Window = windowcr8Emp(connection)      
+        if self.admin_Window is not None:
+            self.cr8Emp_Window.switch_back.connect(lambda: self.show_AdminWindow(connection))        
+            self.admin_Window.close()  
+        if self.hr_Window is not None:
+            self.cr8Emp_Window.switch_back.connect(lambda: self.show_HrWindow(connection))        
+            self.hr_Window.close() 
         self.cr8Emp_Window.show()
         self.cr8Emp_Window.setFixedSize(1080,720)
     
@@ -1228,6 +1297,7 @@ class Controller:
     
     def show_HrWindow(self, connection):
         self.hr_Window = hrWindow(connection)
+        self.hr_Window.switch_cr8Emp.connect(lambda: self.show_window_cr8Emp(connection))
         self.hr_Window.switch_updateEmp.connect(lambda: self.show_window_updateEmp(connection))
         self.hr_Window.switch_EmpSales.connect(lambda: self.show_window_EmpSales(connection))
         self.login.close()
@@ -1235,9 +1305,11 @@ class Controller:
             self.updateEmp_Window.close()
         if self.empSales_Window is not None:
             self.empSales_Window.close()
+        if self.cr8Emp_Window is not None:
+            self.cr8Emp_Window.close()
         self.hr_Window.show()
         self.hr_Window.setFixedSize(1080,720)
-        
+    
     def show_window_updateEmp(self, connection):
         self.updateEmp_Window = windowUpdateEmp(connection)
         self.updateEmp_Window.switch_back.connect(lambda: self.show_HrWindow(connection))
