@@ -202,6 +202,7 @@ class engrWindow (QtWidgets.QWidget):
     switch_updateInv = QtCore.pyqtSignal(psycopg2.extensions.connection)
     switch_updateModel = QtCore.pyqtSignal(psycopg2.extensions.connection)
     switch_engrView = QtCore.pyqtSignal(psycopg2.extensions.connection)  
+    switch_insert_modinv = QtCore.pyqtSignal(psycopg2.extensions.connection)  
     
     def __init__(self, connection):
         QtWidgets.QWidget.__init__(self)
@@ -219,6 +220,10 @@ class engrWindow (QtWidgets.QWidget):
         self.button3.clicked.connect(lambda: self.switch3(connection))
         vBox.addWidget(self.button3)
         
+        self.button4 = QtWidgets.QPushButton('Add new tuple in model/inventory')
+        self.button4.clicked.connect(lambda: self.switch4(connection))
+        vBox.addWidget(self.button4)
+        
         self.setLayout(vBox)
     
     def switch1(self, connection):
@@ -227,7 +232,59 @@ class engrWindow (QtWidgets.QWidget):
         self.switch_updateInv.emit(connection)      
     def switch3(self, connection):
         self.switch_engrView.emit(connection)  
-      
+    def switch4(self, connection):
+        self.switch_insert_modinv.emit(connection)  
+
+class windowInsertModInv(QtWidgets.QWidget):
+    switch_back = QtCore.pyqtSignal(psycopg2.extensions.connection)
+    def __init__(self, connection):
+        QtWidgets.QWidget.__init__(self)
+        self.setWindowTitle('Add new tuple in model/inventory')
+
+        vBox = QtWidgets.QVBoxLayout()
+        hBox1 = QtWidgets.QHBoxLayout()
+        hBox2 = QtWidgets.QHBoxLayout()
+        vBox.setSpacing(-20) 
+        
+        self.rName = QtWidgets.QLineEdit("model")
+        hBox1.addWidget(QtWidgets.QLabel("Relation anme (model/inventory"))
+        hBox1.addWidget(self.rName)
+        
+        self.tuple1 = QtWidgets.QLineEdit("1234, 30")
+        hBox2.addWidget(QtWidgets.QLabel("Tuple"))
+        hBox2.addWidget(self.tuple1)
+
+        self.backbtn = QtWidgets.QPushButton('Back')
+        self.backbtn.clicked.connect(lambda: self.btn_back(connection))
+        
+        vBox.addLayout(hBox1)
+        vBox.addLayout(hBox2)
+
+        self.button = QtWidgets.QPushButton('Add tuple')
+        self.button.clicked.connect(lambda: self.btn_clk(connection,
+                                                       self.rName.text(), 
+                                                       self.tuple1.text()))
+        vBox.addWidget(self.button)
+        vBox.addWidget(self.backbtn)
+        self.setLayout(vBox)
+    def btn_back(self, connection):
+        self.switch_back.emit(connection)      
+        
+    def btn_clk(self, connection, rName, tuple1):
+        try:   
+            cursor = connection.cursor()
+            login_sql = "INSERT INTO "+rName+" VALUES ("+ tuple1+");"
+   
+            cursor.execute(login_sql) #table and columns
+            connection.commit()    
+        except (Exception, psycopg2.Error) as error :
+            print ("Insert tuple failed,", error)           
+   
+        finally:
+            #closing database connection.
+                if(connection):
+                    print("Tuple added")          
+
 class windowUpdateInv(QtWidgets.QWidget):
     switch_back = QtCore.pyqtSignal(psycopg2.extensions.connection)
     def __init__(self, connection):
@@ -1154,6 +1211,7 @@ class Controller:
         self.admin_Window = None
         self.hr_Window = None
         self.view_Order = None
+        self.insertModInvWindow = None
         
     def show_login(self):
         self.login = Login()
@@ -1264,16 +1322,26 @@ class Controller:
         self.engr_Window.switch_updateInv.connect(lambda: self.show_window_updateInv(connection))
         self.engr_Window.switch_updateModel.connect(lambda: self.show_window_updateModel(connection))
         self.engr_Window.switch_engrView.connect(lambda: self.show_window_engrView(connection))
+        self.engr_Window.switch_insert_modinv.connect(lambda: self.show_window_insertModInv(connection))
         self.login.close()
         if self.updateInv_Window is not None:
             self.updateInv_Window.close()
         if self.updateModel_Window is not None:
             self.updateModel_Window.close()
         if self.engrView_Window is not None:
-            self.engrView_Window.close()    
+            self.engrView_Window.close()   
+        if self.insertModInvWindow is not None:
+            self.insertModInvWindow.close()   
         self.engr_Window.show()
         self.engr_Window.setFixedSize(1080,720)
-       
+    
+    def show_window_insertModInv(self, connection):
+        self.insertModInvWindow = windowInsertModInv(connection)
+        self.insertModInvWindow.switch_back.connect(lambda: self.show_EngrWindow(connection))
+        self.engr_Window.close()
+        self.insertModInvWindow.show()
+        self.insertModInvWindow.setFixedSize(1080,720)  
+        
     def show_window_updateInv(self, connection):
         self.updateInv_Window = windowUpdateInv(connection)
         self.updateInv_Window.switch_back.connect(lambda: self.show_EngrWindow(connection))
